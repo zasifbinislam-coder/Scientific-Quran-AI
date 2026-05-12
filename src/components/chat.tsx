@@ -10,7 +10,15 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { ArrowUp, Loader2, BookOpen, Square, Globe, Clock } from "lucide-react";
+import {
+  ArrowUp,
+  Loader2,
+  BookOpen,
+  Square,
+  Globe,
+  Clock,
+  Download,
+} from "lucide-react";
 import { MessageBubble } from "./message-bubble";
 import { Sidebar } from "./sidebar";
 import { UpgradeModal } from "./upgrade-modal";
@@ -221,6 +229,26 @@ export function Chat() {
   const isBusy = status === "submitted" || status === "streaming";
   const showEmpty = messages.length === 0;
 
+  const exportToPdf = useCallback(() => {
+    if (typeof window === "undefined") return;
+    // Native print → user selects "Save as PDF" in the print dialog.
+    // The @media print CSS in globals.css strips UI chrome and styles the
+    // messages for paper / PDF readers.
+    window.print();
+  }, []);
+
+  const conversationTitle = activeSession?.title || "New conversation";
+  const printDateLabel = useMemo(() => {
+    const d = new Date(activeSession?.updatedAt ?? Date.now());
+    return d.toLocaleString(undefined, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }, [activeSession?.updatedAt]);
+
   return (
     <div className="flex flex-1 h-dvh overflow-hidden">
       <Sidebar
@@ -232,10 +260,29 @@ export function Chat() {
       />
 
       <main className="flex flex-1 flex-col bg-background">
-        {/* mobile header */}
-        <div className="md:hidden flex items-center gap-2 border-b border-border px-4 py-3 bg-surface">
-          <BookOpen className="h-5 w-5 text-accent" strokeWidth={1.75} />
-          <h1 className="text-sm font-semibold">Scientific Quran AI</h1>
+        {/* Chat header bar — visible on every screen size */}
+        <div
+          data-no-print
+          className="flex items-center gap-2 border-b border-border px-4 py-2.5 bg-surface"
+        >
+          <BookOpen className="h-5 w-5 text-accent md:hidden" strokeWidth={1.75} />
+          <h1 className="text-sm font-medium text-foreground truncate flex-1">
+            <span className="md:hidden">Scientific Quran AI</span>
+            <span className="hidden md:inline text-muted">
+              {conversationTitle}
+            </span>
+          </h1>
+          {!showEmpty && (
+            <button
+              type="button"
+              onClick={exportToPdf}
+              title="Save this conversation as PDF"
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface-muted hover:bg-accent-soft hover:text-accent-strong px-3 py-1.5 text-xs font-medium text-muted transition-colors"
+            >
+              <Download className="h-3.5 w-3.5" strokeWidth={2} />
+              <span className="hidden sm:inline">Save PDF</span>
+            </button>
+          )}
         </div>
 
         <div
@@ -243,6 +290,19 @@ export function Chat() {
           className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-8 py-6"
         >
           <div className="mx-auto w-full max-w-3xl">
+            {/* Print-only document header */}
+            <div className="print-only mb-6 pb-4 border-b border-gray-300">
+              <h1 className="text-[16pt] font-bold text-black mb-1">
+                {conversationTitle}
+              </h1>
+              <p className="text-[10pt] text-gray-600">
+                Scientific Quran AI · {printDateLabel}
+              </p>
+              <p className="arabic text-[11pt] mt-2" style={{ color: "#094842" }}>
+                بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
+              </p>
+            </div>
+
             {showEmpty ? (
               <EmptyState onPick={submit} />
             ) : (
@@ -252,14 +312,20 @@ export function Chat() {
             )}
 
             {isBusy && messages[messages.length - 1]?.role === "user" && (
-              <div className="flex items-center gap-2 text-muted text-sm pl-11">
+              <div
+                data-no-print
+                className="flex items-center gap-2 text-muted text-sm pl-11"
+              >
                 <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.75} />
                 Reflecting on the sources…
               </div>
             )}
 
             {error && !onCooldown && (
-              <div className="rounded-lg border border-red-300 bg-red-50 dark:bg-red-950/30 dark:border-red-900 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+              <div
+                data-no-print
+                className="rounded-lg border border-red-300 bg-red-50 dark:bg-red-950/30 dark:border-red-900 px-4 py-3 text-sm text-red-700 dark:text-red-300"
+              >
                 {error.message ||
                   "Something went wrong. Check the server logs and your API keys."}
               </div>
@@ -269,6 +335,7 @@ export function Chat() {
 
         <form
           onSubmit={onSubmit}
+          data-no-print
           className="border-t border-border bg-surface px-4 sm:px-6 md:px-8 py-4"
         >
           <div className="mx-auto w-full max-w-3xl">

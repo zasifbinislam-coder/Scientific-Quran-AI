@@ -13,7 +13,10 @@ type Props = {
 
 export function Sidebar({ sessions, activeId, onSelect, onNew, onDelete }: Props) {
   return (
-    <aside className="hidden md:flex md:w-72 lg:w-80 shrink-0 flex-col border-r border-border bg-surface">
+    <aside
+      data-no-print
+      className="hidden md:flex md:w-72 lg:w-80 shrink-0 flex-col border-r border-border bg-surface"
+    >
       <div className="px-5 py-5 border-b border-border">
         <div className="flex items-center gap-2 mb-1">
           <BookOpen className="h-5 w-5 text-accent" strokeWidth={1.75} />

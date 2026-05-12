@@ -105,3 +105,78 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
 }
+
+/* ─── Print / Save-as-PDF — Sir's "export chat" feature ─── */
+.print-only {
+  display: none;
+}
+
+@media print {
+  /* Strip UI chrome — sidebar, input, banners, toggles */
+  [data-no-print] {
+    display: none !important;
+  }
+
+  /* Only the print-header + the messages should show */
+  .print-only {
+    display: block;
+  }
+
+  /* White background, dark text — clean for paper / PDF readers */
+  body,
+  html {
+    background: #ffffff !important;
+    color: #1a1a1a !important;
+    font-size: 11pt;
+    line-height: 1.55;
+  }
+
+  /* Let the message scroll area expand to full content; remove fixed heights */
+  .h-dvh,
+  .overflow-hidden,
+  .overflow-y-auto {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  main {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  /* Message bubbles: flatten the chat look into clean labeled blocks */
+  .message-bubble {
+    page-break-inside: avoid;
+    margin-bottom: 10pt;
+  }
+  .message-bubble.user {
+    background: #f3f0e8 !important;
+    color: #000 !important;
+    border: 1px solid #d8d2c0 !important;
+  }
+  .message-bubble.assistant {
+    background: #ffffff !important;
+    color: #1a1a1a !important;
+    border: 1px solid #c8c8c8 !important;
+  }
+  /* Hide round avatars in print */
+  .message-avatar {
+    display: none !important;
+  }
+  /* Force full-width text area */
+  .message-body {
+    max-width: 100% !important;
+    border-radius: 4pt !important;
+  }
+
+  .arabic {
+    color: #094842 !important;
+  }
+
+  @page {
+    margin: 18mm 16mm 18mm 16mm;
+  }
+}
+

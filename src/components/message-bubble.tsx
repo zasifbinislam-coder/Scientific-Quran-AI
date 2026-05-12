@@ -67,10 +67,12 @@ export function MessageBubble({ message }: { message: UIMessage }) {
 
   return (
     <div
-      className={`flex gap-3 ${isUser ? "flex-row-reverse" : "flex-row"} mb-5`}
+      className={`message-bubble ${isUser ? "user" : "assistant"} flex gap-3 ${
+        isUser ? "flex-row-reverse" : "flex-row"
+      } mb-5`}
     >
       <div
-        className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+        className={`message-avatar shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
           isUser
             ? "bg-surface-muted text-foreground"
             : "bg-accent text-white"
@@ -85,12 +87,16 @@ export function MessageBubble({ message }: { message: UIMessage }) {
       </div>
 
       <div
-        className={`max-w-[78%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${
+        className={`message-body max-w-[78%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${
           isUser
             ? "bg-accent text-white rounded-tr-sm"
             : "bg-surface border border-border text-foreground rounded-tl-sm"
         }`}
       >
+        {/* Print-only label so PDF reader sees who said what */}
+        <p className="print-only text-[10pt] font-semibold uppercase tracking-wider text-gray-500 mb-1">
+          {isUser ? "You" : "Scientific Quran AI"}
+        </p>
         {text ? (
           renderText(text)
         ) : (
