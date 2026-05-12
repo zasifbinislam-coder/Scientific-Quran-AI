@@ -77,23 +77,29 @@ export function Chat() {
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
-  useEffect(() => {
-    if (!error) return;
+  // Synchronous detection (computed during render) — so the raw red error
+  // box NEVER flashes between when error appears and useEffect sets cooldown.
+  const isRateLimitError = useMemo(() => {
+    if (!error) return false;
     const msg = (error.message ?? "").toLowerCase();
-    const isRateLimited =
+    return (
       msg.includes("quota") ||
       msg.includes("rate-limit") ||
       msg.includes("rate limit") ||
       msg.includes("resource_exhausted") ||
-      msg.includes("429");
-    if (!isRateLimited) return;
+      msg.includes("429")
+    );
+  }, [error]);
+
+  useEffect(() => {
+    if (!isRateLimitError) return;
     // Parse "retry in X.XXXs" from Gemini's error to set an accurate countdown.
-    const m = /retry in ([\d.]+)s/i.exec(error.message ?? "");
+    const m = /retry in ([\d.]+)s/i.exec(error?.message ?? "");
     const retrySec = m ? Math.ceil(parseFloat(m[1])) : 60;
     const until = Date.now() + Math.min(Math.max(retrySec, 30), 90) * 1000;
     setCooldownUntil(until);
     setShowUpgrade(true);
-  }, [error]);
+  }, [isRateLimitError, error]);
 
   // Tick every second while cooling down (drives the disabled state + label).
   useEffect(() => {
@@ -321,7 +327,7 @@ export function Chat() {
               </div>
             )}
 
-            {error && !onCooldown && (
+            {error && !isRateLimitError && !onCooldown && (
               <div
                 data-no-print
                 className="rounded-lg border border-red-300 bg-red-50 dark:bg-red-950/30 dark:border-red-900 px-4 py-3 text-sm text-red-700 dark:text-red-300"
