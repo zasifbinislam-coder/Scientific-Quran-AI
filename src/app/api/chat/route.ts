@@ -35,18 +35,28 @@ function collectGoogleKeys(): string[] {
   return Array.from(new Set(keys));
 }
 
-function rotatedGoogleKey(): string {
+// Per-key cooldown: when a key returns 429, we mark it as in cooldown for
+// ~65s so subsequent requests skip it and prefer fresh keys. In-memory only
+// (good for a single warm Vercel container; cold starts reset it, which is
+// fine — RPM windows are short anyway).
+const keyCooldowns = new Map<string, number>();
+
+function rotatedGoogleKey(): { apiKey: string; allKeys: string[] } {
   const keys = collectGoogleKeys();
   if (keys.length === 0) {
     throw new Error(
       "No Gemini API key configured. Set GOOGLE_GENERATIVE_AI_API_KEY (or _2, _3...)."
     );
   }
-  return keys[Math.floor(Math.random() * keys.length)];
+  const now = Date.now();
+  const available = keys.filter((k) => (keyCooldowns.get(k) ?? 0) <= now);
+  const pool = available.length > 0 ? available : keys; // all dead? still try one
+  const apiKey = pool[Math.floor(Math.random() * pool.length)];
+  return { apiKey, allKeys: keys };
 }
 
-function buildGoogleClient() {
-  return createGoogleGenerativeAI({ apiKey: rotatedGoogleKey() });
+function markKeyRateLimited(apiKey: string, durationMs = 65_000) {
+  keyCooldowns.set(apiKey, Date.now() + durationMs);
 }
 
 function pickModel(
@@ -60,9 +70,6 @@ function pickModel(
   if (provider === "anthropic") {
     return anthropic(process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6");
   }
-  // Google. Gemini 3 preview (gemini-flash-latest) is fastest but doesn't
-  // have free grounding quota — fall back to gemini-2.5-flash for the
-  // web-search path.
   const defaultModel = useWebSearch
     ? process.env.GOOGLE_GROUNDED_MODEL ?? "gemini-2.5-flash"
     : process.env.GOOGLE_MODEL ?? "gemini-flash-latest";
@@ -107,9 +114,10 @@ export async function POST(req: Request) {
   const provider = (process.env.LLM_PROVIDER ?? "google").toLowerCase();
   const useWebSearch = Boolean(body.useWebSearch) && provider === "google";
 
-  // Build a per-request Google client with a randomly-rotated API key.
-  // This is what spreads load across multiple keys for free-tier RPM relief.
-  const google = buildGoogleClient();
+  // Build a per-request Google client with a rotated API key (skipping
+  // any keys we already know are in cooldown from a recent 429).
+  const { apiKey } = rotatedGoogleKey();
+  const google = createGoogleGenerativeAI({ apiKey });
 
   const result = streamText({
     model: pickModel(useWebSearch, google),
@@ -119,6 +127,23 @@ export async function POST(req: Request) {
     ...(useWebSearch
       ? { tools: { google_search: google.tools.googleSearch({}) } }
       : {}),
+    onError: ({ error }) => {
+      // When this key hits a quota, mark it dead for 65s so future requests
+      // pick a different one. The user still sees this one failed —
+      // the UI's UpgradeModal handles that gracefully — but the NEXT
+      // request from any user routes around the dead key.
+      const msg =
+        (error as { message?: string })?.message?.toLowerCase?.() ?? "";
+      if (
+        msg.includes("quota") ||
+        msg.includes("rate-limit") ||
+        msg.includes("rate limit") ||
+        msg.includes("resource_exhausted") ||
+        msg.includes("429")
+      ) {
+        markKeyRateLimited(apiKey);
+      }
+    },
   });
 
   return result.toUIMessageStreamResponse({
