@@ -10,9 +10,10 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { ArrowUp, Loader2, BookOpen, Square, Globe } from "lucide-react";
+import { ArrowUp, Loader2, BookOpen, Square, Globe, Clock } from "lucide-react";
 import { MessageBubble } from "./message-bubble";
 import { Sidebar } from "./sidebar";
+import { UpgradeModal } from "./upgrade-modal";
 import {
   ChatSession,
   deriveTitle,
@@ -62,6 +63,47 @@ export function Chat() {
     transport,
     id: activeId ?? "new",
   });
+
+  // Rate-limit cooldown: lock input for 60s when Gemini's free-tier quota hits.
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!error) return;
+    const msg = (error.message ?? "").toLowerCase();
+    const isRateLimited =
+      msg.includes("quota") ||
+      msg.includes("rate-limit") ||
+      msg.includes("rate limit") ||
+      msg.includes("resource_exhausted") ||
+      msg.includes("429");
+    if (!isRateLimited) return;
+    // Parse "retry in X.XXXs" from Gemini's error to set an accurate countdown.
+    const m = /retry in ([\d.]+)s/i.exec(error.message ?? "");
+    const retrySec = m ? Math.ceil(parseFloat(m[1])) : 60;
+    const until = Date.now() + Math.min(Math.max(retrySec, 30), 90) * 1000;
+    setCooldownUntil(until);
+    setShowUpgrade(true);
+  }, [error]);
+
+  // Tick every second while cooling down (drives the disabled state + label).
+  useEffect(() => {
+    if (!cooldownUntil) return;
+    const id = setInterval(() => {
+      const t = Date.now();
+      setNow(t);
+      if (t >= cooldownUntil) {
+        setCooldownUntil(null);
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [cooldownUntil]);
+
+  const cooldownSeconds = cooldownUntil
+    ? Math.max(0, Math.ceil((cooldownUntil - now) / 1000))
+    : 0;
+  const onCooldown = cooldownSeconds > 0;
 
   // Hydrate sessions from localStorage on mount.
   useEffect(() => {
@@ -161,10 +203,14 @@ export function Chat() {
       const trimmed = text.trim();
       if (!trimmed) return;
       if (status === "submitted" || status === "streaming") return;
+      if (cooldownUntil && Date.now() < cooldownUntil) {
+        setShowUpgrade(true);
+        return;
+      }
       sendMessage({ text: trimmed });
       setInput("");
     },
-    [sendMessage, status]
+    [sendMessage, status, cooldownUntil]
   );
 
   const onSubmit = (e: FormEvent) => {
@@ -212,7 +258,7 @@ export function Chat() {
               </div>
             )}
 
-            {error && (
+            {error && !onCooldown && (
               <div className="rounded-lg border border-red-300 bg-red-50 dark:bg-red-950/30 dark:border-red-900 px-4 py-3 text-sm text-red-700 dark:text-red-300">
                 {error.message ||
                   "Something went wrong. Check the server logs and your API keys."}
@@ -226,9 +272,31 @@ export function Chat() {
           className="border-t border-border bg-surface px-4 sm:px-6 md:px-8 py-4"
         >
           <div className="mx-auto w-full max-w-3xl">
+            {onCooldown && (
+              <button
+                type="button"
+                onClick={() => setShowUpgrade(true)}
+                className="mb-2 flex items-center justify-center gap-2 w-full rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-2.5 text-xs sm:text-sm text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors"
+              >
+                <Clock className="h-3.5 w-3.5" strokeWidth={2} />
+                <span>
+                  Free limit reached — paused for{" "}
+                  <span className="font-mono font-semibold tabular-nums">
+                    {cooldownSeconds}s
+                  </span>
+                </span>
+                <span className="text-amber-600 dark:text-amber-400 underline-offset-2 underline">
+                  upgrade
+                </span>
+              </button>
+            )}
             <div
               className={`flex items-end gap-2 rounded-2xl border bg-background px-3 py-2 focus-within:border-accent transition-colors ${
-                useWebSearch ? "border-accent" : "border-border"
+                onCooldown
+                  ? "border-amber-300 dark:border-amber-800 opacity-70"
+                  : useWebSearch
+                  ? "border-accent"
+                  : "border-border"
               }`}
             >
               <textarea
@@ -241,18 +309,21 @@ export function Chat() {
                   }
                 }}
                 rows={1}
+                disabled={onCooldown}
                 placeholder={
-                  useWebSearch
+                  onCooldown
+                    ? `Free limit reached — wait ${cooldownSeconds}s, or click upgrade above`
+                    : useWebSearch
                     ? "Web search enabled — ask a biographical or general fact…"
                     : "Ask about the Quran, science, hadith, or life…"
                 }
-                className="flex-1 resize-none bg-transparent px-2 py-2 text-[15px] leading-6 outline-none placeholder:text-muted max-h-40"
+                className="flex-1 resize-none bg-transparent px-2 py-2 text-[15px] leading-6 outline-none placeholder:text-muted max-h-40 disabled:cursor-not-allowed"
                 style={{ minHeight: "2.5rem", height: "auto" }}
               />
               <button
                 type="button"
                 onClick={() => setUseWebSearch((v) => !v)}
-                disabled={isBusy}
+                disabled={isBusy || onCooldown}
                 title={
                   useWebSearch
                     ? "Web search ON — Gemini may use Google for biographical / general facts. Click to disable."
@@ -280,7 +351,7 @@ export function Chat() {
               ) : (
                 <button
                   type="submit"
-                  disabled={!input.trim()}
+                  disabled={!input.trim() || onCooldown}
                   className="shrink-0 h-9 w-9 rounded-full bg-accent hover:bg-accent-strong disabled:bg-border disabled:cursor-not-allowed text-white flex items-center justify-center transition-colors"
                   aria-label="Send message"
                 >
@@ -308,6 +379,12 @@ export function Chat() {
           </div>
         </form>
       </main>
+
+      <UpgradeModal
+        open={showUpgrade}
+        cooldownUntil={cooldownUntil}
+        onClose={() => setShowUpgrade(false)}
+      />
     </div>
   );
 }
