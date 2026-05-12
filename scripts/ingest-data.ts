@@ -41,7 +41,9 @@ const LOG_FILE = path.join(LOG_DIR, "ingest-progress.log");
 const CHUNK_SIZE = 1000;
 const CHUNK_OVERLAP = 180;
 const EMBED_BATCH = Number(process.env.EMBED_BATCH ?? 50);
-const INSERT_BATCH = 100;
+// 1024-dim vectors are ~4KB each. With HNSW index updates, large inserts can
+// hit Supabase's 8s statement timeout. 50 rows / call stays safely under it.
+const INSERT_BATCH = Number(process.env.INSERT_BATCH ?? 50);
 // Gemini free tier: 100 RPM on gemini-embedding-001. Sleep ~700ms between
 // batches → ~85 RPM, leaving headroom for retries.
 const EMBED_DELAY_MS = Number(process.env.EMBED_DELAY_MS ?? 700);
@@ -292,6 +294,22 @@ async function main() {
   }
   console.log(`📦 Total chunks: ${chunks.length}`);
 
+  // Sanity check: probe the embedding pipeline once and verify dims match
+  // what the Supabase schema expects, before embedding thousands of chunks.
+  const probeVecs = await embedBatch(["__dim_probe__"]);
+  const observedDims = probeVecs[0]?.length ?? 0;
+  const expectedDims = Number(process.env.EMBEDDING_DIMS ?? 1024);
+  console.log(
+    `🔍 Embedding model returns ${observedDims} dims (expected ${expectedDims})`
+  );
+  if (observedDims !== expectedDims) {
+    console.error(
+      `❌ Dim mismatch! Model returns ${observedDims}, but EMBEDDING_DIMS=${expectedDims}. ` +
+        `Check CLOUDFLARE_EMBEDDING_MODEL / EMBEDDING_DIMS in .env.local.`
+    );
+    process.exit(1);
+  }
+
   console.log(
     `🧠 Generating embeddings… (batch=${EMBED_BATCH}, delay=${EMBED_DELAY_MS}ms)`
   );
@@ -357,11 +375,26 @@ async function main() {
       metadata: c.metadata,
       embedding: embSlice[j],
     }));
-    const { error } = await supabase.from("documents").insert(rows);
-    if (error) {
-      console.error(`Insert error at batch ${i}: ${error.message}`);
-      await logLine(`ERROR insert batch ${i}: ${error.message}`);
-      process.exit(1);
+    // Retry-with-backoff on Supabase timeout — happens occasionally under
+    // HNSW indexing load on large 1024-dim batches.
+    let attempts = 0;
+    while (true) {
+      const { error } = await supabase.from("documents").insert(rows);
+      if (!error) break;
+      attempts++;
+      const transient =
+        error.message?.includes("timeout") ||
+        error.message?.includes("canceling statement");
+      if (attempts >= 5 || !transient) {
+        console.error(`Insert error at batch ${i}: ${error.message}`);
+        await logLine(`ERROR insert batch ${i}: ${error.message}`);
+        process.exit(1);
+      }
+      const wait = 2000 * attempts;
+      process.stdout.write(
+        `\n   ⚠ supabase timeout, retry ${attempts}/5 in ${wait}ms\n`
+      );
+      await sleep(wait);
     }
     const done = Math.min(i + INSERT_BATCH, chunks.length);
     process.stdout.write(`    ${done}/${chunks.length}\r`);

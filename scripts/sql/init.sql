@@ -2,8 +2,8 @@
 -- Safe to re-run: it drops and recreates the table + RPC.
 --
 -- Embedding dimensions:
---   Ollama nomic-embed-text          → 768   (default for this project)
---   Ollama bge-m3                    → 1024  (multilingual, CPU-only on Turing)
+--   Cloudflare @cf/baai/bge-m3       → 1024  (default for this project, multilingual)
+--   Ollama nomic-embed-text          → 768
 --   OpenAI text-embedding-3-small    → 1536
 -- If you change provider/dims, edit VECTOR(n) on both the column and the RPC.
 
@@ -18,7 +18,7 @@ CREATE TABLE documents (
   content     TEXT NOT NULL,
   source      TEXT,
   metadata    JSONB NOT NULL DEFAULT '{}'::jsonb,
-  embedding   VECTOR(768),
+  embedding   VECTOR(1024),
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -32,7 +32,7 @@ CREATE INDEX documents_metadata_gin
 
 -- Cosine-similarity RPC used by src/lib/retrieve.ts
 CREATE OR REPLACE FUNCTION match_documents(
-  query_embedding VECTOR(768),
+  query_embedding VECTOR(1024),
   match_count     INT DEFAULT 6,
   filter          JSONB DEFAULT '{}'::jsonb
 )

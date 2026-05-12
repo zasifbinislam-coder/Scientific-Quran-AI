@@ -2,19 +2,27 @@ import { google } from "@ai-sdk/google";
 import { openai } from "@ai-sdk/openai";
 import { embed, embedMany } from "ai";
 
-const PROVIDER = (process.env.EMBEDDING_PROVIDER ?? "ollama").toLowerCase();
-const TARGET_DIMS = Number(process.env.EMBEDDING_DIMS ?? 768);
-const OLLAMA_URL = process.env.OLLAMA_URL ?? "http://localhost:11434";
-const OLLAMA_MODEL = process.env.OLLAMA_EMBEDDING_MODEL ?? "nomic-embed-text";
-const CF_MODEL =
-  process.env.CLOUDFLARE_EMBEDDING_MODEL ?? "@cf/baai/bge-base-en-v1.5";
+// All env config is read lazily (per-call) so that dotenv.config() in the
+// entry script — which always runs AFTER ESM imports are hoisted — is
+// respected. Reading process.env at module load would freeze whichever
+// defaults applied before dotenv ran.
+function cfg() {
+  return {
+    provider: (process.env.EMBEDDING_PROVIDER ?? "ollama").toLowerCase(),
+    targetDims: Number(process.env.EMBEDDING_DIMS ?? 1024),
+    ollamaUrl: process.env.OLLAMA_URL ?? "http://localhost:11434",
+    ollamaModel: process.env.OLLAMA_EMBEDDING_MODEL ?? "nomic-embed-text",
+    cfModel: process.env.CLOUDFLARE_EMBEDDING_MODEL ?? "@cf/baai/bge-m3",
+  };
+}
 
 // ─── Ollama (local, GPU-accelerated, free, dev only) ───
 async function ollamaEmbed(input: string | string[]): Promise<number[][]> {
-  const res = await fetch(`${OLLAMA_URL}/api/embed`, {
+  const { ollamaUrl, ollamaModel } = cfg();
+  const res = await fetch(`${ollamaUrl}/api/embed`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: OLLAMA_MODEL, input }),
+    body: JSON.stringify({ model: ollamaModel, input }),
   });
   if (!res.ok) {
     const txt = await res.text().catch(() => "");
@@ -36,7 +44,8 @@ async function cloudflareEmbed(input: string[]): Promise<number[][]> {
       "Cloudflare embed: set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in env."
     );
   }
-  const url = `https://api.cloudflare.com/client/v4/accounts/${acct.trim()}/ai/run/${CF_MODEL}`;
+  const { cfModel } = cfg();
+  const url = `https://api.cloudflare.com/client/v4/accounts/${acct.trim()}/ai/run/${cfModel}`;
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -61,7 +70,8 @@ async function cloudflareEmbed(input: string[]): Promise<number[][]> {
 
 // ─── Vercel AI SDK path (Google / OpenAI) ───
 function getEmbeddingModel() {
-  if (PROVIDER === "openai") {
+  const { provider } = cfg();
+  if (provider === "openai") {
     const id = process.env.EMBEDDING_MODEL ?? "text-embedding-3-small";
     return openai.textEmbeddingModel(id);
   }
@@ -70,18 +80,20 @@ function getEmbeddingModel() {
 }
 
 function googleProviderOptions(task: "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY") {
-  if (PROVIDER !== "google") return undefined;
+  const { provider, targetDims } = cfg();
+  if (provider !== "google") return undefined;
   return {
-    google: { outputDimensionality: TARGET_DIMS, taskType: task },
+    google: { outputDimensionality: targetDims, taskType: task },
   };
 }
 
 export async function embedQuery(text: string): Promise<number[]> {
-  if (PROVIDER === "ollama") {
+  const { provider } = cfg();
+  if (provider === "ollama") {
     const [v] = await ollamaEmbed(text);
     return v;
   }
-  if (PROVIDER === "cloudflare") {
+  if (provider === "cloudflare") {
     const [v] = await cloudflareEmbed([text]);
     return v;
   }
@@ -95,12 +107,16 @@ export async function embedQuery(text: string): Promise<number[]> {
 }
 
 export async function embedBatch(texts: string[]): Promise<number[][]> {
-  if (PROVIDER === "ollama") {
+  const { provider } = cfg();
+  if (provider === "ollama") {
     return ollamaEmbed(texts);
   }
-  if (PROVIDER === "cloudflare") {
-    // Cloudflare Workers AI caps inputs per call; chunk if needed.
-    const CF_BATCH = 100;
+  if (provider === "cloudflare") {
+    // bge-m3 caps at 60k tokens per request. Our 1000-char chunks average
+    // ~940 tokens, so 100/request → 94k tokens (over limit).
+    // CF_BATCH=30 → ~28k tokens, safely under the cap with headroom for
+    // longer-than-average chunks (Arabic with diacritics tokenizes heavier).
+    const CF_BATCH = Number(process.env.CF_BATCH ?? 30);
     const out: number[][] = [];
     for (let i = 0; i < texts.length; i += CF_BATCH) {
       const slice = texts.slice(i, i + CF_BATCH);
@@ -117,9 +133,8 @@ export async function embedBatch(texts: string[]): Promise<number[][]> {
   return embeddings;
 }
 
-export const EMBEDDING_DIMENSIONS =
-  PROVIDER === "openai"
-    ? 1536
-    : PROVIDER === "ollama" || PROVIDER === "cloudflare"
-    ? TARGET_DIMS
-    : 768;
+export function getEmbeddingDimensions(): number {
+  const { provider, targetDims } = cfg();
+  if (provider === "openai") return 1536;
+  return targetDims;
+}

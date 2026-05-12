@@ -1,4 +1,4 @@
-// Quick verification: confirm Supabase `documents.embedding` is VECTOR(768).
+// Quick verification: confirm Supabase `documents.embedding` is VECTOR(1024).
 import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 
@@ -13,9 +13,9 @@ if (!url || !key) {
 
 const supabase = createClient(url, key, { auth: { persistSession: false } });
 
-// Round-trip a tiny 768-dim vector. If the schema is wrong size or missing,
+// Round-trip a tiny 1024-dim vector. If the schema is wrong size or missing,
 // the insert errors out with a clear message.
-const probe = new Array(768).fill(0).map((_, i) => Math.sin(i) * 0.01);
+const probe = new Array(1024).fill(0).map((_, i) => Math.sin(i) * 0.01);
 const { data, error } = await supabase
   .from("documents")
   .insert({
@@ -30,7 +30,7 @@ const { data, error } = await supabase
 if (error) {
   console.error("✗ schema check FAILED:", error.message);
   if (error.message.includes("dimensions") || error.message.includes("vector")) {
-    console.error("  → Supabase is NOT at VECTOR(768). Re-run scripts/sql/init.sql.");
+    console.error("  → Supabase is NOT at VECTOR(1024). Re-run scripts/sql/init.sql.");
   } else if (error.message.includes("does not exist")) {
     console.error("  → Table 'documents' missing. Run scripts/sql/init.sql.");
   }
@@ -39,4 +39,4 @@ if (error) {
 
 // Clean up the probe row.
 await supabase.from("documents").delete().eq("id", data.id);
-console.log("✓ documents table exists and accepts 768-dim embeddings.");
+console.log("✓ documents table exists and accepts 1024-dim embeddings.");
