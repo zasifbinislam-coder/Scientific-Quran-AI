@@ -29,8 +29,23 @@
   --font-serif: var(--font-amiri);
 }
 
+/* Manual dark mode — set by ThemeToggle via data-theme on <html>. */
+:root[data-theme="dark"] {
+  --background: #0e1310;
+  --surface: #141a16;
+  --surface-muted: #1a221d;
+  --foreground: #e9ece7;
+  --muted: #8a918c;
+  --border: #243029;
+  --accent: #6ec4b8;
+  --accent-soft: #1c2e2a;
+  --accent-strong: #b3e1d8;
+  --gold: #d6ab5e;
+}
+
+/* OS dark mode — only kicks in when user hasn't picked a manual theme. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
     --background: #0e1310;
     --surface: #141a16;
     --surface-muted: #1a221d;

@@ -23,6 +23,7 @@ import {
 import { MessageBubble } from "./message-bubble";
 import { Sidebar } from "./sidebar";
 import { UpgradeModal } from "./upgrade-modal";
+import { ThemeToggle } from "./theme-toggle";
 import {
   ChatSession,
   deriveTitle,
@@ -133,17 +134,16 @@ export function Chat() {
   const onCooldown = cooldownSeconds > 0;
 
   // Hydrate sessions from localStorage on mount.
+  // Always open a fresh "New conversation" on page load — existing chats
+  // remain accessible from the sidebar. The fresh session is NOT added to
+  // the sidebar until the user actually sends a message in it (handled by
+  // the persistence effect below), so empty page-loads don't pollute history.
   useEffect(() => {
     const loaded = loadSessions();
     setSessions(loaded);
-    if (loaded.length > 0) {
-      setActiveId(loaded[0].id);
-      setMessages(loaded[0].messages);
-    } else {
-      const s = newSession();
-      setSessions([s]);
-      setActiveId(s.id);
-    }
+    const fresh = newSession();
+    setActiveId(fresh.id);
+    setMessages([]);
     setHydrated(true);
   }, [setMessages]);
 
@@ -154,13 +154,31 @@ export function Chat() {
   }, [activeId, hydrated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist messages back to the active session whenever they change.
+  // Two cases:
+  //   1. Active session already exists in sessions[] → update it.
+  //   2. Active session is the fresh one we created on mount but never
+  //      added to sessions[]. If messages are empty, skip (don't pollute
+  //      history with empty chats). If messages exist, add the new session
+  //      to the top of sessions[].
   useEffect(() => {
     if (!hydrated || !activeId) return;
+    if ((messages?.length ?? 0) === 0) return; // skip empty
     setSessions((prev) => {
       const idx = prev.findIndex((s) => s.id === activeId);
-      if (idx === -1) return prev;
+      const now = Date.now();
+      if (idx === -1) {
+        const fresh: ChatSession = {
+          id: activeId,
+          title: deriveTitle(messages as UIMessage[]),
+          createdAt: now,
+          updatedAt: now,
+          messages: messages as UIMessage[],
+        };
+        const next = [fresh, ...prev];
+        saveSessions(next);
+        return next;
+      }
       const current = prev[idx];
-      // Skip if messages are reference-equal to what's stored (initial swap).
       if (current.messages === messages) return prev;
       const updated: ChatSession = {
         ...current,
@@ -169,7 +187,7 @@ export function Chat() {
           current.title === "New conversation" || current.title === ""
             ? deriveTitle(messages as UIMessage[])
             : current.title,
-        updatedAt: Date.now(),
+        updatedAt: now,
       };
       const next = [...prev];
       next[idx] = updated;
@@ -188,12 +206,9 @@ export function Chat() {
   }, [messages]);
 
   const handleNew = useCallback(() => {
+    // Don't pre-add the empty session to sessions[] — the persistence
+    // effect will insert it once the user actually sends a first message.
     const s = newSession();
-    setSessions((prev) => {
-      const next = [s, ...prev];
-      saveSessions(next);
-      return next;
-    });
     setActiveId(s.id);
     setMessages([]);
     setSidebarOpen(false);
@@ -214,11 +229,10 @@ export function Chat() {
             setActiveId(next[0].id);
             setMessages(next[0].messages);
           } else {
+            // No sessions left — start a fresh empty one (not persisted yet).
             const s = newSession();
-            saveSessions([s]);
             setActiveId(s.id);
             setMessages([]);
-            return [s];
           }
         }
         return next;
@@ -310,6 +324,7 @@ export function Chat() {
               {conversationTitle}
             </span>
           </h1>
+          <ThemeToggle />
           {!showEmpty && (
             <button
               type="button"
