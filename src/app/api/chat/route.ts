@@ -15,17 +15,31 @@ export const maxDuration = 60;
 
 // ─── Multi-key rotation for Gemini ───
 // Each Google account / GCP project gets its own free-tier RPM quota.
-// Setting GOOGLE_GENERATIVE_AI_API_KEY to a comma-separated list lets us
-// rotate per request — N keys → effective ~ N × 20 RPM.
-function rotatedGoogleKey(): string {
-  const raw = process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? "";
-  const keys = raw
+// Two ways to supply multiple keys (we read both for convenience):
+//   1. GOOGLE_GENERATIVE_AI_API_KEY=key1,key2,key3   (comma-separated)
+//   2. GOOGLE_GENERATIVE_AI_API_KEY_2=...            (numbered: _2, _3, ... up to _10)
+// Each request picks a random key → effective ~ N × free-tier RPM.
+function collectGoogleKeys(): string[] {
+  const keys: string[] = [];
+  const primary = process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? "";
+  primary
     .split(",")
     .map((k) => k.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .forEach((k) => keys.push(k));
+  for (let i = 2; i <= 10; i++) {
+    const k = process.env[`GOOGLE_GENERATIVE_AI_API_KEY_${i}`]?.trim();
+    if (k) keys.push(k);
+  }
+  // Dedupe in case the same key was set in both formats.
+  return Array.from(new Set(keys));
+}
+
+function rotatedGoogleKey(): string {
+  const keys = collectGoogleKeys();
   if (keys.length === 0) {
     throw new Error(
-      "GOOGLE_GENERATIVE_AI_API_KEY is not set. Add one or more comma-separated keys."
+      "No Gemini API key configured. Set GOOGLE_GENERATIVE_AI_API_KEY (or _2, _3...)."
     );
   }
   return keys[Math.floor(Math.random() * keys.length)];
