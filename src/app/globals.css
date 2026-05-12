@@ -146,10 +146,15 @@ body {
     padding: 0 !important;
   }
 
-  /* Message bubbles: flatten the chat look into clean labeled blocks */
+  /* Message bubbles: flatten the chat look into clean labeled blocks. Allow
+     long messages to break across pages (no page-break-inside: avoid) so
+     pages fill naturally instead of leaving huge gaps when a message can't
+     fit on the remaining space. */
   .message-bubble {
-    page-break-inside: avoid;
     margin-bottom: 10pt;
+    /* Soft hint to keep at least a couple of lines together on widow/orphan */
+    orphans: 3;
+    widows: 3;
   }
   .message-bubble.user {
     background: #f3f0e8 !important;
@@ -168,7 +173,13 @@ body {
   /* Force full-width text area */
   .message-body {
     max-width: 100% !important;
+    width: 100% !important;
     border-radius: 4pt !important;
+  }
+  /* The flex row that normally aligns user-right/assistant-left becomes
+     a plain block in print, so the bubble fills the page width. */
+  .message-bubble {
+    display: block !important;
   }
 
   .arabic {
