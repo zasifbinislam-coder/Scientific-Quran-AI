@@ -87,7 +87,7 @@ export function MessageBubble({ message }: { message: UIMessage }) {
       </div>
 
       <div
-        className={`message-body max-w-[78%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${
+        className={`message-body max-w-[88%] sm:max-w-[80%] md:max-w-[78%] rounded-2xl px-3.5 sm:px-4 py-3 text-[15px] leading-relaxed ${
           isUser
             ? "bg-accent text-white rounded-tr-sm"
             : "bg-surface border border-border text-foreground rounded-tl-sm"

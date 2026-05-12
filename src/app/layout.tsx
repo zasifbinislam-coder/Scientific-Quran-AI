@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Amiri } from "next/font/google";
 import "./globals.css";
 
@@ -22,6 +22,17 @@ export const metadata: Metadata = {
   title: "Scientific Quran AI — Tafsir & Wisdom",
   description:
     "A scientific, Quran-grounded AI assistant. Answers from the Holy Quran, authentic Hadith, and scholarly tafsir — bilingual (English & Bengali).",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover", // respects iOS notch + home-indicator safe areas
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8f5ef" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e1310" },
+  ],
 };
 
 export default function RootLayout({

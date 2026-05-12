@@ -18,6 +18,7 @@ import {
   Globe,
   Clock,
   Download,
+  Menu,
 } from "lucide-react";
 import { MessageBubble } from "./message-bubble";
 import { Sidebar } from "./sidebar";
@@ -44,11 +45,23 @@ export function Chat() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [useWebSearch, setUseWebSearch] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const useWebSearchRef = useRef(false);
   useEffect(() => {
     useWebSearchRef.current = useWebSearch;
   }, [useWebSearch]);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Lock body scroll while the mobile drawer is open.
+  useEffect(() => {
+    if (sidebarOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [sidebarOpen]);
 
   const activeSession = useMemo(
     () => sessions.find((s) => s.id === activeId) ?? null,
@@ -183,10 +196,12 @@ export function Chat() {
     });
     setActiveId(s.id);
     setMessages([]);
+    setSidebarOpen(false);
   }, [setMessages]);
 
   const handleSelect = useCallback((id: string) => {
     setActiveId(id);
+    setSidebarOpen(false);
   }, []);
 
   const handleDelete = useCallback(
@@ -256,24 +271,41 @@ export function Chat() {
   }, [activeSession?.updatedAt]);
 
   return (
-    <div className="flex flex-1 h-dvh overflow-hidden">
+    <div className="flex flex-1 h-dvh overflow-hidden relative">
       <Sidebar
         sessions={sessions}
         activeId={activeId}
         onSelect={handleSelect}
         onNew={handleNew}
         onDelete={handleDelete}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
 
-      <main className="flex flex-1 flex-col bg-background">
+      <main
+        className="flex flex-1 flex-col bg-background min-w-0"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
         {/* Chat header bar — visible on every screen size */}
         <div
           data-no-print
-          className="flex items-center gap-2 border-b border-border px-4 py-2.5 bg-surface"
+          className="flex items-center gap-2 border-b border-border px-3 sm:px-4 py-2.5 bg-surface"
         >
-          <BookOpen className="h-5 w-5 text-accent md:hidden" strokeWidth={1.75} />
-          <h1 className="text-sm font-medium text-foreground truncate flex-1">
-            <span className="md:hidden">Scientific Quran AI</span>
+          {/* Mobile: hamburger to open sidebar */}
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="md:hidden -ml-1 h-9 w-9 flex items-center justify-center rounded-lg text-muted hover:bg-surface-muted active:bg-surface-muted transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" strokeWidth={1.75} />
+          </button>
+          <BookOpen
+            className="hidden md:hidden h-5 w-5 text-accent"
+            strokeWidth={1.75}
+          />
+          <h1 className="text-sm font-medium text-foreground truncate flex-1 min-w-0">
+            <span className="md:hidden">{conversationTitle}</span>
             <span className="hidden md:inline text-muted">
               {conversationTitle}
             </span>
@@ -283,9 +315,10 @@ export function Chat() {
               type="button"
               onClick={exportToPdf}
               title="Save this conversation as PDF"
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface-muted hover:bg-accent-soft hover:text-accent-strong px-3 py-1.5 text-xs font-medium text-muted transition-colors"
+              aria-label="Save as PDF"
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface-muted hover:bg-accent-soft hover:text-accent-strong active:bg-accent-soft active:text-accent-strong px-3 py-2 sm:py-1.5 text-xs font-medium text-muted transition-colors"
             >
-              <Download className="h-3.5 w-3.5" strokeWidth={2} />
+              <Download className="h-4 w-4 sm:h-3.5 sm:w-3.5" strokeWidth={2} />
               <span className="hidden sm:inline">Save PDF</span>
             </button>
           )}
@@ -293,7 +326,7 @@ export function Chat() {
 
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-8 py-6"
+          className="flex-1 overflow-y-auto px-3 sm:px-6 md:px-8 py-4 sm:py-6"
         >
           <div className="mx-auto w-full max-w-3xl">
             {/* Print-only document header */}
@@ -342,7 +375,10 @@ export function Chat() {
         <form
           onSubmit={onSubmit}
           data-no-print
-          className="border-t border-border bg-surface px-4 sm:px-6 md:px-8 py-4"
+          className="border-t border-border bg-surface px-3 sm:px-6 md:px-8 pt-3 sm:pt-4"
+          style={{
+            paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))",
+          }}
         >
           <div className="mx-auto w-full max-w-3xl">
             {onCooldown && (
@@ -385,12 +421,13 @@ export function Chat() {
                 disabled={onCooldown}
                 placeholder={
                   onCooldown
-                    ? `Free limit reached — wait ${cooldownSeconds}s, or click upgrade above`
+                    ? `Wait ${cooldownSeconds}s — limit reached`
                     : useWebSearch
-                    ? "Web search enabled — ask a biographical or general fact…"
-                    : "Ask about the Quran, science, hadith, or life…"
+                    ? "Ask a biographical / general fact (web)…"
+                    : "Ask about the Quran, science, or life…"
                 }
-                className="flex-1 resize-none bg-transparent px-2 py-2 text-[15px] leading-6 outline-none placeholder:text-muted max-h-40 disabled:cursor-not-allowed"
+                /* font-size: 16px (text-base) prevents iOS auto-zoom on focus */
+                className="flex-1 resize-none bg-transparent px-2 py-2 text-base sm:text-[15px] leading-6 outline-none placeholder:text-muted max-h-40 disabled:cursor-not-allowed"
                 style={{ minHeight: "2.5rem", height: "auto" }}
               />
               <button
@@ -403,13 +440,14 @@ export function Chat() {
                     : "Web search OFF — answers from your Quran + tafsir only. Click to enable for bio/general questions."
                 }
                 aria-pressed={useWebSearch}
-                className={`shrink-0 h-9 px-3 rounded-full flex items-center gap-1.5 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                aria-label="Toggle web search"
+                className={`shrink-0 h-9 sm:h-9 w-9 sm:w-auto px-0 sm:px-3 rounded-full flex items-center justify-center gap-1.5 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                   useWebSearch
                     ? "bg-accent text-white hover:bg-accent-strong"
                     : "bg-surface-muted text-muted hover:text-foreground border border-border"
                 }`}
               >
-                <Globe className="h-3.5 w-3.5" strokeWidth={2} />
+                <Globe className="h-4 w-4 sm:h-3.5 sm:w-3.5" strokeWidth={2} />
                 <span className="hidden sm:inline">Web</span>
               </button>
               {isBusy ? (
@@ -464,24 +502,26 @@ export function Chat() {
 
 function EmptyState({ onPick }: { onPick: (text: string) => void }) {
   return (
-    <div className="flex flex-col items-center justify-center text-center py-16">
-      <div className="w-14 h-14 rounded-full bg-accent-soft text-accent-strong flex items-center justify-center mb-5">
-        <BookOpen className="h-7 w-7" strokeWidth={1.5} />
+    <div className="flex flex-col items-center justify-center text-center py-10 sm:py-16 px-1">
+      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-accent-soft text-accent-strong flex items-center justify-center mb-4 sm:mb-5">
+        <BookOpen className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={1.5} />
       </div>
-      <h2 className="text-xl font-semibold tracking-tight mb-1">
+      <h2 className="text-lg sm:text-xl font-semibold tracking-tight mb-1">
         Scientific Quran AI
       </h2>
-      <p className="arabic mb-3 text-accent-strong">بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</p>
-      <p className="text-muted max-w-md text-sm leading-relaxed mb-8">
-        Ask anything — life, science, theology, or doubt. Answers are anchored in
-        the Holy Quran, authentic Hadith, and scientific tafsir.
+      <p className="arabic mb-3 text-accent-strong text-xl sm:text-2xl">
+        بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
+      </p>
+      <p className="text-muted max-w-md text-[13px] sm:text-sm leading-relaxed mb-6 sm:mb-8 px-2">
+        Ask anything — life, science, theology, or doubt. Answers are anchored
+        in the Holy Quran, authentic Hadith, and scientific tafsir.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-2xl">
         {SUGGESTED_PROMPTS.map((p) => (
           <button
             key={p}
             onClick={() => onPick(p)}
-            className="text-left rounded-xl border border-border bg-surface hover:border-accent hover:bg-accent-soft transition-colors px-4 py-3 text-sm text-foreground"
+            className="text-left rounded-xl border border-border bg-surface hover:border-accent hover:bg-accent-soft active:bg-accent-soft transition-colors px-4 py-3 text-sm text-foreground"
           >
             {p}
           </button>
