@@ -145,12 +145,20 @@ export function AuthButton() {
             <p className="text-xs text-muted truncate">{profile.email}</p>
           </div>
           <Link
+            href="/account"
+            onClick={() => setMenuOpen(false)}
+            className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-foreground hover:bg-surface-muted transition-colors"
+          >
+            <UserIcon className="h-4 w-4 text-muted" strokeWidth={1.75} />
+            My account
+          </Link>
+          <Link
             href="/subscribe"
             onClick={() => setMenuOpen(false)}
             className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-foreground hover:bg-surface-muted transition-colors"
           >
             <Sparkles className="h-4 w-4 text-accent" strokeWidth={1.75} />
-            Subscribe / status
+            Subscribe
           </Link>
           {isAdmin && (
             <Link

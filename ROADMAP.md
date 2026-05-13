@@ -55,11 +55,11 @@ When Sir says **"resume"**, pick the highest-priority unchecked items and start.
 ## 🟡 Pending — High priority (do these first on "resume")
 
 ### Auth polish
-- [ ] **Forgot password flow** — Supabase `resetPasswordForEmail`, send email with reset link, `/auth/reset-password` page to set new password
-- [ ] **`/signup` route opens login page in signup mode** — currently redirects with `?mode=signup` but `/login` page ignores the query param
-- [ ] **Auto-create subscription row tied to user_id** on signup so we can show "My subscription status" without email matching
-- [ ] **"My subscription" page** — show current plan, expiry, history, cancel option
-- [ ] **Sign-out from /admin** — currently you'd have to go back to chat to sign out (small)
+- [x] **Forgot password flow** — `/forgot-password` + `/reset-password` pages wired with Supabase `resetPasswordForEmail`
+- [x] **`/signup` route opens login page in signup mode** — `?mode=signup` now respected
+- [x] **"My subscription" page** — `/account` shows active/pending status + history
+- [x] **Sign-out from /admin** — AuthButton mounted in admin header
+- [ ] **Auto-create subscription row tied to user_id** on signup so we can show "My subscription status" without email matching (currently matches by email which works but is fragile)
 
 ### Subscription robustness
 - [ ] **Email notifications** — Resend or SES integration. Send email when:

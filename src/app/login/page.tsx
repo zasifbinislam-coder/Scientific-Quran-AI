@@ -39,8 +39,10 @@ function LoginInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/";
+  const initialMode: Mode =
+    searchParams.get("mode") === "signup" ? "signup" : "signin";
 
-  const [mode, setMode] = useState<Mode>("signin");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -236,12 +238,12 @@ function LoginInner() {
                 <span className="flex items-center justify-between text-xs font-medium text-muted mb-1.5">
                   <span>Password</span>
                   {mode === "signin" && (
-                    <span
-                      className="text-muted/70 italic"
-                      title="Forgot-password flow coming soon"
+                    <Link
+                      href="/forgot-password"
+                      className="text-accent hover:text-accent-strong underline-offset-2 hover:underline"
                     >
-                      forgot?
-                    </span>
+                      Forgot?
+                    </Link>
                   )}
                 </span>
                 <div className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2.5 focus-within:border-accent transition-colors">

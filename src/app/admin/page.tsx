@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getServerSupabase, isAdminEmail } from "@/lib/supabase-auth";
 import { getSupabase } from "@/lib/supabase";
 import { AdminTable, type Subscription } from "@/components/admin-table";
+import { AuthButton } from "@/components/auth-button";
 import { ArrowLeft, ShieldCheck, BookOpen } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -57,10 +58,11 @@ export default async function AdminPage() {
           <ArrowLeft className="h-4 w-4" strokeWidth={1.75} />
           <span className="hidden sm:inline">Back to chat</span>
         </Link>
-        <div className="flex-1 flex items-center justify-center gap-2 -ml-12 sm:-ml-32">
+        <div className="flex-1 flex items-center justify-center gap-2">
           <ShieldCheck className="h-4 w-4 text-accent" strokeWidth={1.75} />
           <span className="text-sm font-semibold tracking-tight">Admin</span>
         </div>
+        <AuthButton />
       </header>
 
       <main className="flex-1 overflow-y-auto">
