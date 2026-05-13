@@ -7,8 +7,11 @@ import {
   type UIMessage,
   type LanguageModel,
 } from "ai";
+import { cookies } from "next/headers";
 import { buildSystemPrompt } from "@/lib/system-prompt";
 import { formatRetrievedForPrompt, retrieveContext } from "@/lib/retrieve";
+import { getServerSupabase } from "@/lib/supabase-auth";
+import { getSupabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -122,17 +125,53 @@ function lastUserText(messages: UIMessage[]): string {
   return "";
 }
 
+// Check whether the signed-in user has an active (verified, non-expired)
+// subscription. Returns true if so — caller should then bypass the IP
+// rate-limiter. Anonymous users always get the free-tier limit applied.
+async function isSubscribed(email: string | null | undefined): Promise<boolean> {
+  if (!email) return false;
+  try {
+    const sb = getSupabase();
+    const { data, error } = await sb
+      .from("subscriptions")
+      .select("id, expires_at")
+      .eq("email", email.toLowerCase())
+      .eq("status", "verified")
+      .gt("expires_at", new Date().toISOString())
+      .limit(1)
+      .maybeSingle();
+    if (error) return false;
+    return Boolean(data);
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(req: Request) {
-  // Abuse prevention — block a single IP that's hammering the chat.
-  const ip = getClientIp(req);
-  const limitCheck = checkIpLimit(ip);
-  if (!limitCheck.ok) {
-    return Response.json(
-      {
-        error: `Too many requests from your IP. Please retry in ~${limitCheck.retrySec}s.`,
-      },
-      { status: 429, headers: { "Retry-After": String(limitCheck.retrySec) } }
-    );
+  // Resolve signed-in user (if any) via Supabase session cookie.
+  let userEmail: string | null = null;
+  try {
+    const cookieStore = await cookies();
+    const userClient = getServerSupabase(cookieStore);
+    const { data } = await userClient.auth.getUser();
+    userEmail = data.user?.email ?? null;
+  } catch {
+    // Auth env not configured / no session — proceed as anonymous.
+  }
+  const subscribed = await isSubscribed(userEmail);
+
+  // Abuse prevention — apply IP rate limit ONLY to non-subscribers.
+  if (!subscribed) {
+    const ip = getClientIp(req);
+    const limitCheck = checkIpLimit(ip);
+    if (!limitCheck.ok) {
+      return Response.json(
+        {
+          error: `Too many requests from your IP. Please retry in ~${limitCheck.retrySec}s.`,
+        },
+        { status: 429, headers: { "Retry-After": String(limitCheck.retrySec) } }
+      );
+    }
   }
 
   let body: { messages?: UIMessage[]; useWebSearch?: boolean };

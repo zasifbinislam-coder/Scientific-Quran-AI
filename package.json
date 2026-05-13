@@ -13,6 +13,7 @@
     "@ai-sdk/google": "^3.0.71",
     "@ai-sdk/openai": "^3.0.63",
     "@ai-sdk/react": "^3.0.179",
+    "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
     "ai": "^6.0.177",
     "lucide-react": "^1.14.0",

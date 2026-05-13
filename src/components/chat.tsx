@@ -24,6 +24,7 @@ import { MessageBubble } from "./message-bubble";
 import { Sidebar } from "./sidebar";
 import { UpgradeModal } from "./upgrade-modal";
 import { ThemeToggle } from "./theme-toggle";
+import { AuthButton } from "./auth-button";
 import {
   ChatSession,
   deriveTitle,
@@ -337,6 +338,7 @@ export function Chat() {
               <span className="hidden sm:inline">Save PDF</span>
             </button>
           )}
+          <AuthButton />
         </div>
 
         <div
