@@ -14,6 +14,8 @@ import {
   Lock,
 } from "lucide-react";
 import { getBrowserSupabase } from "@/lib/supabase-auth";
+import { scorePassword } from "@/lib/password-strength";
+import { PasswordStrength } from "@/components/password-strength";
 import type { User } from "@supabase/supabase-js";
 
 type Mode = "signin" | "signup";
@@ -87,6 +89,18 @@ function LoginInner() {
       // Success → router push back to wherever they came from.
       router.replace(next);
     } else {
+      // Client-side compensation for HIBP-Pro: block weak passwords.
+      const strength = scorePassword(password);
+      if (strength.score < 2) {
+        setStatus({
+          state: "error",
+          message: `Password is ${strength.label.toLowerCase()}. ${
+            strength.tips[0] ?? "Try a stronger password."
+          }`,
+        });
+        return;
+      }
+
       // Sign up. Supabase will send a confirmation email by default.
       const emailRedirectTo =
         typeof window !== "undefined"
@@ -263,6 +277,7 @@ function LoginInner() {
                     )}
                   </button>
                 </div>
+                {mode === "signup" && <PasswordStrength password={password} />}
               </label>
 
               {status.state === "error" && (
