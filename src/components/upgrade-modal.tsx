@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Sparkles, Clock, Mail, X } from "lucide-react";
+import Link from "next/link";
+import { Sparkles, Clock, ArrowRight, X } from "lucide-react";
 
 type Props = {
   open: boolean;
@@ -23,14 +24,6 @@ export function UpgradeModal({ open, cooldownUntil, onClose }: Props) {
   const secondsLeft = cooldownUntil
     ? Math.max(0, Math.ceil((cooldownUntil - now) / 1000))
     : 0;
-
-  const mailto =
-    "mailto:zasifbinislam@gmail.com?subject=" +
-    encodeURIComponent("Scientific Quran AI — Subscription interest") +
-    "&body=" +
-    encodeURIComponent(
-      "Hi, I'd like to subscribe to Scientific Quran AI (৳300 / 3 months).\n\nName:\nPhone / bKash number:\n"
-    );
 
   return (
     <div
@@ -110,13 +103,14 @@ export function UpgradeModal({ open, cooldownUntil, onClose }: Props) {
             </li>
           </ul>
 
-          <a
-            href={mailto}
+          <Link
+            href="/subscribe"
+            onClick={onClose}
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-accent hover:bg-accent-strong text-white text-sm font-medium px-4 py-2.5 transition-colors"
           >
-            <Mail className="h-4 w-4" strokeWidth={2} />
-            Subscribe — contact us
-          </a>
+            Subscribe — ৳300 / 3 months
+            <ArrowRight className="h-4 w-4" strokeWidth={2} />
+          </Link>
         </div>
 
         <div className="px-6 pb-5 pt-1 text-center">

@@ -1,6 +1,7 @@
 "use client";
 
-import { MessageSquare, Plus, Trash2, BookOpen, X } from "lucide-react";
+import Link from "next/link";
+import { MessageSquare, Plus, Trash2, BookOpen, X, Sparkles } from "lucide-react";
 import { ChatSession } from "@/lib/chat-store";
 
 type Props = {
@@ -123,21 +124,57 @@ export function Sidebar({
           )}
         </div>
 
-        <div
-          className="border-t border-border px-5 py-3 text-[11px] text-muted leading-relaxed"
-          style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
-        >
-          <p>
-            Primary: <span className="text-foreground">Holy Quran</span>
-          </p>
-          <p>
-            Secondary:{" "}
-            <span className="text-foreground">Zakaria Kamal — Tafsir</span>
-          </p>
-          <p>
-            Contextual only:{" "}
-            <span className="text-foreground">Hadith & Bible</span>
-          </p>
+        <div className="border-t border-border">
+          <Link
+            href="/subscribe"
+            onClick={onClose}
+            className="flex items-center gap-2 mx-3 my-3 rounded-lg border border-accent/30 bg-accent-soft hover:bg-accent hover:text-white active:bg-accent active:text-white text-accent-strong px-3 py-2 text-xs font-medium transition-colors"
+          >
+            <Sparkles className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+            <span className="flex-1">Upgrade · ৳300 / 3 mo</span>
+          </Link>
+
+          <div
+            className="px-5 py-3 border-t border-border text-[11px] text-muted leading-relaxed"
+            style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+          >
+            <p>
+              Primary: <span className="text-foreground">Holy Quran</span>
+            </p>
+            <p>
+              Secondary:{" "}
+              <span className="text-foreground">Zakaria Kamal — Tafsir</span>
+            </p>
+            <p className="mb-2">
+              Contextual only:{" "}
+              <span className="text-foreground">Hadith & Bible</span>
+            </p>
+            <p className="flex flex-wrap gap-x-2 gap-y-1">
+              <Link
+                href="/about"
+                onClick={onClose}
+                className="hover:text-foreground underline-offset-2 hover:underline"
+              >
+                About
+              </Link>
+              <span>·</span>
+              <Link
+                href="/privacy"
+                onClick={onClose}
+                className="hover:text-foreground underline-offset-2 hover:underline"
+              >
+                Privacy
+              </Link>
+              <span>·</span>
+              <Link
+                href="/terms"
+                onClick={onClose}
+                className="hover:text-foreground underline-offset-2 hover:underline"
+              >
+                Terms
+              </Link>
+            </p>
+          </div>
         </div>
       </aside>
     </>

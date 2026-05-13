@@ -13,6 +13,37 @@ import { formatRetrievedForPrompt, retrieveContext } from "@/lib/retrieve";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+// ─── IP-based abuse limiter ───
+// In-memory per-IP token bucket. Best-effort on Vercel (cold starts reset
+// the Map, but warm containers carry state for the duration of their life,
+// which is enough to stop a single abusive client from draining all Gemini
+// keys in a single burst). For stronger guarantees switch to @upstash/ratelimit.
+const IP_LIMIT = Number(process.env.IP_LIMIT ?? 30);
+const IP_WINDOW_MS = Number(process.env.IP_WINDOW_MS ?? 60_000);
+const ipBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function getClientIp(req: Request): string {
+  const fwd = req.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0]!.trim();
+  const real = req.headers.get("x-real-ip");
+  if (real) return real.trim();
+  return "unknown";
+}
+
+function checkIpLimit(ip: string): { ok: true } | { ok: false; retrySec: number } {
+  const now = Date.now();
+  const bucket = ipBuckets.get(ip);
+  if (!bucket || bucket.resetAt <= now) {
+    ipBuckets.set(ip, { count: 1, resetAt: now + IP_WINDOW_MS });
+    return { ok: true };
+  }
+  if (bucket.count >= IP_LIMIT) {
+    return { ok: false, retrySec: Math.ceil((bucket.resetAt - now) / 1000) };
+  }
+  bucket.count++;
+  return { ok: true };
+}
+
 // ─── Multi-key rotation for Gemini ───
 // Each Google account / GCP project gets its own free-tier RPM quota.
 // Two ways to supply multiple keys (we read both for convenience):
@@ -92,6 +123,18 @@ function lastUserText(messages: UIMessage[]): string {
 }
 
 export async function POST(req: Request) {
+  // Abuse prevention — block a single IP that's hammering the chat.
+  const ip = getClientIp(req);
+  const limitCheck = checkIpLimit(ip);
+  if (!limitCheck.ok) {
+    return Response.json(
+      {
+        error: `Too many requests from your IP. Please retry in ~${limitCheck.retrySec}s.`,
+      },
+      { status: 429, headers: { "Retry-After": String(limitCheck.retrySec) } }
+    );
+  }
+
   let body: { messages?: UIMessage[]; useWebSearch?: boolean };
   try {
     body = await req.json();
