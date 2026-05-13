@@ -436,10 +436,10 @@ export function Chat() {
                 disabled={onCooldown}
                 placeholder={
                   onCooldown
-                    ? `Wait ${cooldownSeconds}s — limit reached`
+                    ? `Wait ${cooldownSeconds}s…`
                     : useWebSearch
-                    ? "Ask a biographical / general fact (web)…"
-                    : "Ask about the Quran, science, or life…"
+                    ? "Ask a general fact (web)…"
+                    : "Ask about the Quran or life…"
                 }
                 /* font-size: 16px (text-base) prevents iOS auto-zoom on focus */
                 className="flex-1 resize-none bg-transparent px-2 py-2 text-base sm:text-[15px] leading-6 outline-none placeholder:text-muted max-h-40 disabled:cursor-not-allowed"
