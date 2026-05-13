@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { LogIn, LogOut, ShieldCheck, User as UserIcon, Sparkles } from "lucide-react";
 import { getBrowserSupabase } from "@/lib/supabase-auth";
 import type { Session, User } from "@supabase/supabase-js";
@@ -23,6 +24,7 @@ export function AuthButton() {
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
 
   // Hydrate session on mount + subscribe to auth changes.
   useEffect(() => {
@@ -79,25 +81,13 @@ export function AuthButton() {
     };
   }, [menuOpen]);
 
-  const signInWithGoogle = async () => {
-    const supa = getBrowserSupabase();
-    const redirectTo =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(
-            window.location.pathname + window.location.search
-          )}`
-        : undefined;
-    await supa.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo },
-    });
-  };
-
   const signOut = async () => {
     const supa = getBrowserSupabase();
     await supa.auth.signOut();
     setMenuOpen(false);
   };
+
+  const loginHref = `/login?next=${encodeURIComponent(pathname || "/")}`;
 
   if (loading) {
     return (
@@ -107,15 +97,14 @@ export function AuthButton() {
 
   if (!profile) {
     return (
-      <button
-        type="button"
-        onClick={signInWithGoogle}
+      <Link
+        href={loginHref}
         className="shrink-0 flex items-center gap-1.5 rounded-full bg-surface-muted hover:bg-accent-soft hover:text-accent-strong active:bg-accent-soft active:text-accent-strong px-3 py-2 sm:py-1.5 text-xs font-medium text-muted transition-colors"
-        title="Sign in with Google to manage your subscription"
+        title="Sign in or create an account"
       >
         <LogIn className="h-4 w-4 sm:h-3.5 sm:w-3.5" strokeWidth={2} />
         <span className="hidden sm:inline">Sign in</span>
-      </button>
+      </Link>
     );
   }
 

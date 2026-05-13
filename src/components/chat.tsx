@@ -41,6 +41,13 @@ const SUGGESTED_PROMPTS = [
   "What does Islam say about the expansion of the universe?",
 ];
 
+// Module-level flag: false on hard load / fresh tab, becomes true after
+// the Chat component mounts the first time. Used to distinguish "user
+// just opened the app" (→ start fresh chat) from "user went to /subscribe
+// or /admin and came back" (→ restore the chat they were on).
+let chatHasMountedThisTab = false;
+const ACTIVE_ID_KEY = "sqai.activeId";
+
 export function Chat() {
   const [hydrated, setHydrated] = useState(false);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -135,18 +142,70 @@ export function Chat() {
   const onCooldown = cooldownSeconds > 0;
 
   // Hydrate sessions from localStorage on mount.
-  // Always open a fresh "New conversation" on page load — existing chats
-  // remain accessible from the sidebar. The fresh session is NOT added to
-  // the sidebar until the user actually sends a message in it (handled by
-  // the persistence effect below), so empty page-loads don't pollute history.
+  //
+  // Two scenarios:
+  //   A. Fresh hard load (new tab / refresh): open a clean new conversation.
+  //      The fresh session is NOT persisted to sessions[] until the user
+  //      actually sends a message (handled by the persistence effect below),
+  //      so empty page-loads don't pollute history.
+  //   B. Internal back-navigation (e.g. came from /subscribe or /admin):
+  //      restore the chat the user was on so they don't lose context.
+  //
+  // The module-level chatHasMountedThisTab flag resets on hard reload (the
+  // JS module is re-evaluated) but persists across client-side route changes
+  // (Next.js keeps the module alive), so it cleanly distinguishes the two.
   useEffect(() => {
     const loaded = loadSessions();
     setSessions(loaded);
-    const fresh = newSession();
-    setActiveId(fresh.id);
-    setMessages([]);
+
+    const camingBackInTab = chatHasMountedThisTab;
+    chatHasMountedThisTab = true;
+
+    let restored = false;
+    if (camingBackInTab) {
+      try {
+        const lastActive = sessionStorage.getItem(ACTIVE_ID_KEY);
+        if (lastActive) {
+          const match = loaded.find((s) => s.id === lastActive);
+          if (match) {
+            setActiveId(match.id);
+            setMessages(match.messages);
+            restored = true;
+          } else {
+            // Last active session was the empty "fresh" one that never got
+            // saved. Re-create one with the same id to keep the flow.
+            setActiveId(lastActive);
+            setMessages([]);
+            restored = true;
+          }
+        }
+      } catch {
+        /* sessionStorage unavailable — fall through to fresh */
+      }
+    }
+
+    if (!restored) {
+      const fresh = newSession();
+      setActiveId(fresh.id);
+      setMessages([]);
+      try {
+        sessionStorage.setItem(ACTIVE_ID_KEY, fresh.id);
+      } catch {
+        /* ignore */
+      }
+    }
     setHydrated(true);
   }, [setMessages]);
+
+  // Keep sessionStorage in sync so back-nav can restore the right chat.
+  useEffect(() => {
+    if (!activeId) return;
+    try {
+      sessionStorage.setItem(ACTIVE_ID_KEY, activeId);
+    } catch {
+      /* ignore */
+    }
+  }, [activeId]);
 
   // Whenever the active session changes, swap messages.
   useEffect(() => {
