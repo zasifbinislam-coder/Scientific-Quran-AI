@@ -28,8 +28,21 @@ CREATE INDEX IF NOT EXISTS subscriptions_email_active_idx
   WHERE status = 'verified';
 
 -- Helper view: is an email currently subscribed?
-CREATE OR REPLACE VIEW active_subscriptions AS
+-- security_invoker = true makes the view run with the CALLER's permissions,
+-- so RLS on subscriptions is respected (silences Supabase advisor).
+DROP VIEW IF EXISTS active_subscriptions;
+CREATE VIEW active_subscriptions
+WITH (security_invoker = true) AS
 SELECT email, MAX(expires_at) AS expires_at
 FROM subscriptions
 WHERE status = 'verified' AND expires_at > NOW()
 GROUP BY email;
+
+-- Authenticated users can read their own subscription row (email match).
+-- Service role still has full access (bypasses RLS) for /admin endpoints.
+DROP POLICY IF EXISTS "Users can read own subscription" ON subscriptions;
+CREATE POLICY "Users can read own subscription"
+  ON subscriptions
+  FOR SELECT
+  TO authenticated
+  USING (email = (SELECT auth.jwt() ->> 'email'));

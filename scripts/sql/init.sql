@@ -44,6 +44,8 @@ RETURNS TABLE (
   similarity  FLOAT
 )
 LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   RETURN QUERY
@@ -59,3 +61,13 @@ BEGIN
   LIMIT match_count;
 END;
 $$;
+
+-- Public read policy on documents — the Quran/tafsir knowledge base is
+-- already public content; this just silences the "RLS no policy" advisor
+-- and is honest about what the data is.
+DROP POLICY IF EXISTS "Public can read documents" ON documents;
+CREATE POLICY "Public can read documents"
+  ON documents
+  FOR SELECT
+  TO public
+  USING (true);
