@@ -14,7 +14,7 @@ import {
   User as UserIcon,
 } from "lucide-react";
 
-const BKASH_NUMBER = "01XXXXXXXXX"; // ← Sir's bKash personal/merchant number (update before launch)
+const BKASH_NUMBER = "01920262202"; // ← Sir's bKash personal/merchant number (update before launch)
 
 type Status =
   | { state: "idle" }
