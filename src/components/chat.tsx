@@ -34,10 +34,10 @@ import {
 import type { UIMessage } from "ai";
 
 const SUGGESTED_PROMPTS = [
+  "মহাবিশ্বের সৃষ্টি সম্পর্কে কুরআন কী বলে?",
+  "ভবিষ্যৎ নিয়ে চিন্তিত — কুরআন কী পরামর্শ দেয়?",
   "How does the Quran describe the development of the embryo?",
   "What does Islam say about the expansion of the universe?",
-  "I'm anxious about the future — what guidance does the Quran offer?",
-  "মহাবিশ্বের সৃষ্টি সম্পর্কে কুরআন কী বলে?",
 ];
 
 export function Chat() {
