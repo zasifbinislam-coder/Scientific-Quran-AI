@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -25,6 +25,15 @@ type Status =
   | { state: "error"; message: string };
 
 export default function LoginPage() {
+  // useSearchParams must be inside a Suspense boundary during static export.
+  return (
+    <Suspense fallback={null}>
+      <LoginInner />
+    </Suspense>
+  );
+}
+
+function LoginInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/";
