@@ -14,6 +14,7 @@ import {
   PinOff,
   Pencil,
   Check,
+  Search,
 } from "lucide-react";
 import { ChatSession, sessionTitle } from "@/lib/chat-store";
 
@@ -41,6 +42,8 @@ export function Sidebar({
   open,
   onClose,
 }: Props) {
+  const [query, setQuery] = useState("");
+  const filtered = filterSessions(sessions, query);
   return (
     <>
       {/* Mobile overlay — fades in when drawer is open */}
@@ -96,14 +99,34 @@ export function Sidebar({
           New conversation
         </button>
 
+        {sessions.length > 3 && (
+          <div className="mx-4 mb-2 relative">
+            <Search
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted pointer-events-none"
+              strokeWidth={1.75}
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search chats…"
+              className="w-full rounded-lg border border-border bg-background pl-8 pr-2 py-1.5 text-xs outline-none focus:border-accent placeholder:text-muted"
+            />
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto px-2 py-2">
           {sessions.length === 0 ? (
             <p className="px-3 py-6 text-xs text-muted text-center">
               No conversations yet.
             </p>
+          ) : filtered.length === 0 ? (
+            <p className="px-3 py-6 text-xs text-muted text-center">
+              No chats match &ldquo;{query}&rdquo;.
+            </p>
           ) : (
             <ul className="space-y-0.5">
-              {sessions.map((s) => (
+              {filtered.map((s) => (
                 <SessionRow
                   key={s.id}
                   session={s}
@@ -173,6 +196,26 @@ export function Sidebar({
       </aside>
     </>
   );
+}
+
+function filterSessions(sessions: ChatSession[], query: string): ChatSession[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return sessions;
+  return sessions.filter((s) => {
+    if (sessionTitle(s).toLowerCase().includes(q)) return true;
+    // Match against message text — best-effort, only checks "text" parts.
+    for (const m of s.messages) {
+      const text =
+        m.parts
+          ?.filter(
+            (p): p is { type: "text"; text: string } => p.type === "text"
+          )
+          .map((p) => p.text.toLowerCase())
+          .join(" ") ?? "";
+      if (text.includes(q)) return true;
+    }
+    return false;
+  });
 }
 
 function SessionRow({

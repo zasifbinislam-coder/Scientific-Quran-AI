@@ -85,7 +85,7 @@ When Sir says **"resume"**, pick the highest-priority unchecked items and start.
 
 ### Chat UX
 - [ ] **Cross-device chat sync** — currently chats live in localStorage. Move to Supabase `chat_sessions` table keyed by user_id so logged-in users see their chats on any device
-- [ ] **Search across past conversations**
+- [x] **Search across past conversations** — sidebar search input (appears when ≥ 4 chats exist) matches both the (possibly user-renamed) title and the text of every message. Pinned ordering is preserved within the filtered list. Bangla and English both work since the lowercase compare is Unicode-aware.
 - [x] **Pin / rename chats** — per-row kebab menu opens Pin/Unpin, Rename (inline edit, Enter to save / Esc to cancel), Delete. Pinned rows float to top of sidebar with the Pin icon swapped in for the message bubble. `customTitle` field on `ChatSession` keeps user-set titles; `sortSessions()` enforces pinned-first ordering both on load and on every mutation.
 - [x] **Copy answer button** on every message (user + assistant), with copied-confirmation flicker
 - [x] **Regenerate** button on the most recent assistant message — peels the assistant turn off the tail and resends the prior user prompt through the same transport (respects the web-search toggle)
