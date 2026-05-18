@@ -100,6 +100,49 @@ export function subscriptionActivatedEmail(name: string, expiresAt: Date) {
   `);
 }
 
+export function subscriptionExpiringEmail(name: string, expiresAt: Date) {
+  const fmt = new Intl.DateTimeFormat("en-GB", {
+    year: "numeric", month: "long", day: "2-digit",
+  }).format(expiresAt);
+  const daysLeft = Math.max(
+    1,
+    Math.ceil((expiresAt.getTime() - Date.now()) / (24 * 3600 * 1000))
+  );
+  return wrap(`
+    <p>আসসালামু আলাইকুম <strong>${escapeHtml(name)}</strong>,</p>
+    <p>আপনার সাবস্ক্রিপশন <strong>${daysLeft} দিন</strong> পর শেষ হবে
+       (${fmt}). রিনিউ করতে চাইলে নিচের লিঙ্কে যান।</p>
+    <p style="margin-top:20px">
+      <a href="https://scientific-quran-ai.vercel.app/subscribe"
+         style="background:#0d7b6f;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;display:inline-block">
+        রিনিউ করুন →
+      </a>
+    </p>
+    <hr style="border:none;border-top:1px solid #eee;margin:16px 0"/>
+    <p style="font-size:13px;color:#555"><em>English:</em> Your subscription
+      ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"} on ${fmt}. Renew to
+      keep your rate-limit bypass active.</p>
+  `);
+}
+
+export function subscriptionExpiredEmail(name: string) {
+  return wrap(`
+    <p>আসসালামু আলাইকুম <strong>${escapeHtml(name)}</strong>,</p>
+    <p>আপনার সাবস্ক্রিপশন আজ শেষ হয়ে গেছে। ফ্রি টিয়ারে এখনও প্রশ্ন করতে পারবেন
+       (per-IP rate limit সহ), অথবা ৩০০ টাকায় ৩ মাসের জন্য রিনিউ করুন।</p>
+    <p style="margin-top:20px">
+      <a href="https://scientific-quran-ai.vercel.app/subscribe"
+         style="background:#0d7b6f;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;display:inline-block">
+        এখনই রিনিউ করুন →
+      </a>
+    </p>
+    <hr style="border:none;border-top:1px solid #eee;margin:16px 0"/>
+    <p style="font-size:13px;color:#555"><em>English:</em> Your subscription
+      expired today. You can keep using the free tier (subject to per-IP
+      rate limits) or renew for ৳300 / 3 months.</p>
+  `);
+}
+
 export function subscriptionRejectedEmail(name: string, notes: string | null) {
   return wrap(`
     <p>আসসালামু আলাইকুম <strong>${escapeHtml(name)}</strong>,</p>

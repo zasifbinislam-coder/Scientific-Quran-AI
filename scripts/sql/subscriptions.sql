@@ -25,6 +25,12 @@ ALTER TABLE subscriptions
 ALTER TABLE subscriptions
   ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
 
+-- Cron-driven lifecycle email guards. Each timestamp is null until the
+-- corresponding email has been sent, so the cron doesn't re-send daily.
+ALTER TABLE subscriptions
+  ADD COLUMN IF NOT EXISTS reminder_sent_at  TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS expired_notified_at TIMESTAMPTZ;
+
 -- Backfill: for existing rows that have no user_id, try to match by email.
 UPDATE subscriptions s
 SET user_id = u.id

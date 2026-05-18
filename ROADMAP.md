@@ -66,7 +66,7 @@ When Sir says **"resume"**, pick the highest-priority unchecked items and start.
   - User submits subscription → bilingual "we received your payment" receipt with TrxID
   - Admin verifies → bilingual "your subscription is active until X" + CTA
   - Admin rejects → bilingual "we couldn't verify" with optional notes
-- [ ] **Email notifications (lifecycle, cron-driven)** — expiring-in-7-days reminder and expired-renew-now email (needs Vercel cron task)
+- [x] **Email notifications (lifecycle, cron-driven)** — daily Vercel cron at 06:00 UTC scans verified rows for expiring-in-7-days (sends bilingual reminder) and already-expired (sends bilingual renew nudge); `reminder_sent_at` and `expired_notified_at` guard columns prevent re-sends. Bearer auth via `CRON_SECRET`.
 - [x] **Cancel / refund flow** — `/account` Active card has a "Request cancellation" button + reason modal; POST `/api/cancel-request` stamps the row's notes with `[CANCEL REQUESTED ...]` (status preserved so access stays live until admin processes the bKash refund off-platform)
 - [ ] **Automatic verification** if we ever integrate bKash payment API (long-term, requires merchant account)
 - [ ] **Subscriber-only chat features**: maybe higher Gemini RPM, longer conversations, image upload
