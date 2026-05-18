@@ -1,8 +1,21 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { MessageSquare, Plus, Trash2, BookOpen, X, Sparkles } from "lucide-react";
-import { ChatSession } from "@/lib/chat-store";
+import {
+  MessageSquare,
+  Plus,
+  Trash2,
+  BookOpen,
+  X,
+  Sparkles,
+  MoreVertical,
+  Pin,
+  PinOff,
+  Pencil,
+  Check,
+} from "lucide-react";
+import { ChatSession, sessionTitle } from "@/lib/chat-store";
 
 type Props = {
   sessions: ChatSession[];
@@ -10,6 +23,8 @@ type Props = {
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  onTogglePin: (id: string) => void;
+  onRename: (id: string, title: string) => void;
   /** Mobile drawer state. Desktop ignores this (sidebar is always inline). */
   open: boolean;
   onClose: () => void;
@@ -21,6 +36,8 @@ export function Sidebar({
   onSelect,
   onNew,
   onDelete,
+  onTogglePin,
+  onRename,
   open,
   onClose,
 }: Props) {
@@ -86,40 +103,17 @@ export function Sidebar({
             </p>
           ) : (
             <ul className="space-y-0.5">
-              {sessions.map((s) => {
-                const isActive = s.id === activeId;
-                return (
-                  <li key={s.id}>
-                    <div
-                      className={`group flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm cursor-pointer transition-colors ${
-                        isActive
-                          ? "bg-accent-soft text-accent-strong"
-                          : "hover:bg-surface-muted active:bg-surface-muted text-foreground"
-                      }`}
-                      onClick={() => onSelect(s.id)}
-                    >
-                      <MessageSquare
-                        className="h-4 w-4 shrink-0 opacity-70"
-                        strokeWidth={1.75}
-                      />
-                      <span className="flex-1 truncate">
-                        {s.title || "Untitled"}
-                      </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDelete(s.id);
-                        }}
-                        // Always visible on touch (mobile); hover-only on desktop.
-                        className="md:opacity-0 md:group-hover:opacity-100 p-1 -mr-1 text-muted hover:text-red-500 active:text-red-500 transition-opacity"
-                        aria-label="Delete conversation"
-                      >
-                        <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" strokeWidth={1.75} />
-                      </button>
-                    </div>
-                  </li>
-                );
-              })}
+              {sessions.map((s) => (
+                <SessionRow
+                  key={s.id}
+                  session={s}
+                  isActive={s.id === activeId}
+                  onSelect={onSelect}
+                  onDelete={onDelete}
+                  onTogglePin={onTogglePin}
+                  onRename={onRename}
+                />
+              ))}
             </ul>
           )}
         </div>
@@ -178,5 +172,168 @@ export function Sidebar({
         </div>
       </aside>
     </>
+  );
+}
+
+function SessionRow({
+  session,
+  isActive,
+  onSelect,
+  onDelete,
+  onTogglePin,
+  onRename,
+}: {
+  session: ChatSession;
+  isActive: boolean;
+  onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
+  onTogglePin: (id: string) => void;
+  onRename: (id: string, title: string) => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [draft, setDraft] = useState(sessionTitle(session));
+  const rowRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onDown(e: MouseEvent) {
+      if (!rowRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [menuOpen]);
+
+  function startRename() {
+    setDraft(sessionTitle(session));
+    setRenaming(true);
+    setMenuOpen(false);
+  }
+
+  function commitRename() {
+    const next = draft.trim();
+    if (next && next !== sessionTitle(session)) {
+      onRename(session.id, next);
+    }
+    setRenaming(false);
+  }
+
+  return (
+    <li>
+      <div
+        ref={rowRef}
+        className={`relative group flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm cursor-pointer transition-colors ${
+          isActive
+            ? "bg-accent-soft text-accent-strong"
+            : "hover:bg-surface-muted active:bg-surface-muted text-foreground"
+        }`}
+        onClick={() => !renaming && onSelect(session.id)}
+      >
+        {session.pinned ? (
+          <Pin
+            className="h-4 w-4 shrink-0 text-accent"
+            strokeWidth={2}
+            aria-label="Pinned"
+          />
+        ) : (
+          <MessageSquare
+            className="h-4 w-4 shrink-0 opacity-70"
+            strokeWidth={1.75}
+          />
+        )}
+        {renaming ? (
+          <input
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitRename();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                setRenaming(false);
+              }
+            }}
+            maxLength={80}
+            className="flex-1 min-w-0 bg-transparent outline-none border-b border-accent text-sm py-0"
+          />
+        ) : (
+          <span className="flex-1 truncate">{sessionTitle(session)}</span>
+        )}
+
+        {renaming ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              commitRename();
+            }}
+            className="p-1 -mr-1 text-accent hover:text-accent-strong"
+            aria-label="Save title"
+          >
+            <Check className="h-4 w-4" strokeWidth={2} />
+          </button>
+        ) : (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen((v) => !v);
+            }}
+            className="md:opacity-0 md:group-hover:opacity-100 data-[open=true]:opacity-100 p-1 -mr-1 text-muted hover:text-foreground transition-opacity"
+            data-open={menuOpen}
+            aria-label="Conversation options"
+            aria-haspopup="menu"
+          >
+            <MoreVertical className="h-4 w-4 md:h-3.5 md:w-3.5" strokeWidth={1.75} />
+          </button>
+        )}
+
+        {menuOpen && (
+          <div
+            role="menu"
+            className="absolute right-2 top-9 z-10 min-w-[160px] rounded-lg border border-border bg-surface shadow-lg py-1 text-sm"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              role="menuitem"
+              onClick={() => {
+                onTogglePin(session.id);
+                setMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-left text-foreground hover:bg-surface-muted"
+            >
+              {session.pinned ? (
+                <>
+                  <PinOff className="h-3.5 w-3.5" strokeWidth={1.75} /> Unpin
+                </>
+              ) : (
+                <>
+                  <Pin className="h-3.5 w-3.5" strokeWidth={1.75} /> Pin
+                </>
+              )}
+            </button>
+            <button
+              role="menuitem"
+              onClick={startRename}
+              className="w-full flex items-center gap-2 px-3 py-2 text-left text-foreground hover:bg-surface-muted"
+            >
+              <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} /> Rename
+            </button>
+            <button
+              role="menuitem"
+              onClick={() => {
+                onDelete(session.id);
+                setMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-left text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+            >
+              <Trash2 className="h-3.5 w-3.5" strokeWidth={1.75} /> Delete
+            </button>
+          </div>
+        )}
+      </div>
+    </li>
   );
 }

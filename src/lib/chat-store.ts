@@ -4,7 +4,12 @@ import type { UIMessage } from "ai";
 
 export type ChatSession = {
   id: string;
+  /** Auto-derived from the first user message; overridden by customTitle. */
   title: string;
+  /** User-set title (rename). When present, displayed instead of `title`. */
+  customTitle?: string;
+  /** Pinned sessions float to the top of the sidebar list, above the rest. */
+  pinned?: boolean;
   createdAt: number;
   updatedAt: number;
   messages: UIMessage[];
@@ -29,10 +34,27 @@ export function loadSessions(): ChatSession[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as ChatSession[];
     if (!Array.isArray(parsed)) return [];
-    return parsed.sort((a, b) => b.updatedAt - a.updatedAt);
+    return sortSessions(parsed);
   } catch {
     return [];
   }
+}
+
+/** Pinned first (by recency), then unpinned (by recency). */
+export function sortSessions(sessions: ChatSession[]): ChatSession[] {
+  return [...sessions].sort((a, b) => {
+    const ap = a.pinned ? 1 : 0;
+    const bp = b.pinned ? 1 : 0;
+    if (ap !== bp) return bp - ap;
+    return b.updatedAt - a.updatedAt;
+  });
+}
+
+/** Display title — prefers user-set rename, falls back to auto-derived. */
+export function sessionTitle(s: ChatSession): string {
+  const custom = s.customTitle?.trim();
+  if (custom) return custom;
+  return s.title || "Untitled";
 }
 
 export function saveSessions(sessions: ChatSession[]): void {

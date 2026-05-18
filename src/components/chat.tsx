@@ -32,6 +32,7 @@ import {
   loadSessions,
   newSession,
   saveSessions,
+  sortSessions,
 } from "@/lib/chat-store";
 import type { UIMessage } from "ai";
 
@@ -250,9 +251,11 @@ export function Chat() {
             : current.title,
         updatedAt: now,
       };
-      const next = [...prev];
-      next[idx] = updated;
-      next.sort((a, b) => b.updatedAt - a.updatedAt);
+      const next = sortSessions([
+        ...prev.slice(0, idx),
+        updated,
+        ...prev.slice(idx + 1),
+      ]);
       saveSessions(next);
       return next;
     });
@@ -301,6 +304,26 @@ export function Chat() {
     },
     [activeId, setMessages]
   );
+
+  const handleTogglePin = useCallback((id: string) => {
+    setSessions((prev) => {
+      const next = sortSessions(
+        prev.map((s) => (s.id === id ? { ...s, pinned: !s.pinned } : s))
+      );
+      saveSessions(next);
+      return next;
+    });
+  }, []);
+
+  const handleRename = useCallback((id: string, title: string) => {
+    setSessions((prev) => {
+      const next = prev.map((s) =>
+        s.id === id ? { ...s, customTitle: title } : s
+      );
+      saveSessions(next);
+      return next;
+    });
+  }, []);
 
   const submit = useCallback(
     (text: string) => {
@@ -387,6 +410,8 @@ export function Chat() {
         onSelect={handleSelect}
         onNew={handleNew}
         onDelete={handleDelete}
+        onTogglePin={handleTogglePin}
+        onRename={handleRename}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
