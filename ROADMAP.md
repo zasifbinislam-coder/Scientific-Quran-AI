@@ -59,7 +59,7 @@ When Sir says **"resume"**, pick the highest-priority unchecked items and start.
 - [x] **`/signup` route opens login page in signup mode** — `?mode=signup` now respected
 - [x] **"My subscription" page** — `/account` shows active/pending status + history
 - [x] **Sign-out from /admin** — AuthButton mounted in admin header
-- [ ] **Auto-create subscription row tied to user_id** on signup so we can show "My subscription status" without email matching (currently matches by email which works but is fragile)
+- [x] **Tie subscription rows to `user_id`** — added nullable `user_id` column + backfill + index; `/api/subscribe` attaches the signed-in user's id at submit; `/account` queries by user_id OR email so legacy rows and anonymous submissions both stay visible
 
 ### Subscription robustness
 - [ ] **Email notifications** — Resend or SES integration. Send email when:

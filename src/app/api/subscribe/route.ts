@@ -1,4 +1,6 @@
+import { cookies } from "next/headers";
 import { getSupabase, hasSupabase } from "@/lib/supabase";
+import { getServerSupabase } from "@/lib/supabase-auth";
 
 export const runtime = "nodejs";
 
@@ -69,6 +71,19 @@ export async function POST(req: Request) {
     });
   }
 
+  // If the visitor is signed in, attach their auth user_id to the row.
+  // Anonymous submissions still work (user_id stays null, /account falls
+  // back to email matching when the user later signs up with that email).
+  let userId: string | null = null;
+  try {
+    const cookieStore = await cookies();
+    const userClient = getServerSupabase(cookieStore);
+    const { data: userData } = await userClient.auth.getUser();
+    userId = userData.user?.id ?? null;
+  } catch {
+    // Auth check is best-effort; never block a paying customer over it.
+  }
+
   try {
     const supabase = getSupabase();
     const { error } = await supabase.from("subscriptions").insert({
@@ -79,6 +94,7 @@ export async function POST(req: Request) {
       plan: "3-months",
       amount_bdt: 300,
       status: "pending",
+      user_id: userId,
     });
     if (error) {
       console.error("[/api/subscribe] supabase insert error:", error.message);

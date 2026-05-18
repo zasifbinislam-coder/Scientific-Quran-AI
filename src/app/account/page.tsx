@@ -29,13 +29,17 @@ export default async function AccountPage() {
     redirect("/login?next=/account");
   }
   const email = userData.user.email!;
+  const userId = userData.user.id;
 
   // Fetch all of this user's subscription rows via service role (RLS bypass).
+  // Match on user_id (rows submitted while signed in) OR email (older rows
+  // and anonymous submissions made with the same address). Either path
+  // belongs to this account.
   const admin = getSupabase();
   const { data: rows } = await admin
     .from("subscriptions")
     .select("*")
-    .eq("email", email.toLowerCase())
+    .or(`user_id.eq.${userId},email.eq.${email.toLowerCase()}`)
     .order("created_at", { ascending: false });
 
   const subs = rows ?? [];

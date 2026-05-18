@@ -20,9 +20,22 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 ALTER TABLE subscriptions
   ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
 
+-- Idempotent migration: tie each row to an auth user so /account doesn't
+-- have to rely on case-sensitive email matching. Older rows keep email-only.
+ALTER TABLE subscriptions
+  ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+
+-- Backfill: for existing rows that have no user_id, try to match by email.
+UPDATE subscriptions s
+SET user_id = u.id
+FROM auth.users u
+WHERE s.user_id IS NULL
+  AND lower(u.email) = lower(s.email);
+
 CREATE INDEX IF NOT EXISTS subscriptions_email_idx ON subscriptions (email);
 CREATE INDEX IF NOT EXISTS subscriptions_status_idx ON subscriptions (status);
 CREATE INDEX IF NOT EXISTS subscriptions_created_idx ON subscriptions (created_at DESC);
+CREATE INDEX IF NOT EXISTS subscriptions_user_id_idx ON subscriptions (user_id);
 CREATE INDEX IF NOT EXISTS subscriptions_email_active_idx
   ON subscriptions (email, expires_at)
   WHERE status = 'verified';
@@ -38,11 +51,15 @@ FROM subscriptions
 WHERE status = 'verified' AND expires_at > NOW()
 GROUP BY email;
 
--- Authenticated users can read their own subscription row (email match).
+-- Authenticated users can read their own subscription row.
+-- Match on user_id first (robust), fall back to email so older rows stay visible.
 -- Service role still has full access (bypasses RLS) for /admin endpoints.
 DROP POLICY IF EXISTS "Users can read own subscription" ON subscriptions;
 CREATE POLICY "Users can read own subscription"
   ON subscriptions
   FOR SELECT
   TO authenticated
-  USING (email = (SELECT auth.jwt() ->> 'email'));
+  USING (
+    user_id = auth.uid()
+    OR email = (SELECT auth.jwt() ->> 'email')
+  );
