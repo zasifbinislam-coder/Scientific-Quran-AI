@@ -322,6 +322,40 @@ export function Chat() {
   };
 
   const isBusy = status === "submitted" || status === "streaming";
+
+  // Regenerate the last assistant message: peel it (plus any trailing
+  // empty / error messages) off the tail, find the user message before
+  // it, and resend that prompt. Same web-search flag flows through the
+  // transport, so the regenerated answer respects the current toggle.
+  const regenerateLast = useCallback(() => {
+    if (isBusy) return;
+    if (cooldownUntil && Date.now() < cooldownUntil) {
+      setShowUpgrade(true);
+      return;
+    }
+    const all = messages as UIMessage[];
+    let lastUserIdx = -1;
+    for (let i = all.length - 1; i >= 0; i--) {
+      if (all[i].role === "user") {
+        lastUserIdx = i;
+        break;
+      }
+    }
+    if (lastUserIdx < 0) return;
+    const userMsg = all[lastUserIdx];
+    const userText =
+      userMsg.parts
+        ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+        .map((p) => p.text)
+        .join("\n") ?? "";
+    if (!userText.trim()) return;
+
+    // Drop everything from (and including) the user message that triggered
+    // the response we're about to replace. sendMessage re-appends a fresh
+    // user turn so we don't end up with a duplicate.
+    setMessages(all.slice(0, lastUserIdx));
+    sendMessage({ text: userText });
+  }, [messages, sendMessage, setMessages, isBusy, cooldownUntil]);
   const showEmpty = messages.length === 0;
 
   const exportToPdf = useCallback(() => {
@@ -421,9 +455,18 @@ export function Chat() {
             {showEmpty ? (
               <EmptyState onPick={submit} />
             ) : (
-              messages.map((m) => (
-                <MessageBubble key={m.id} message={m as UIMessage} />
-              ))
+              messages.map((m, i) => {
+                const isLastAssistant =
+                  m.role === "assistant" && i === messages.length - 1 && !isBusy;
+                return (
+                  <MessageBubble
+                    key={m.id}
+                    message={m as UIMessage}
+                    canRegenerate={isLastAssistant}
+                    onRegenerate={isLastAssistant ? regenerateLast : undefined}
+                  />
+                );
+              })
             )}
 
             {isBusy && messages[messages.length - 1]?.role === "user" && (

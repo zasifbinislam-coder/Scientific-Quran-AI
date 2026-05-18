@@ -87,8 +87,8 @@ When Sir says **"resume"**, pick the highest-priority unchecked items and start.
 - [ ] **Cross-device chat sync** — currently chats live in localStorage. Move to Supabase `chat_sessions` table keyed by user_id so logged-in users see their chats on any device
 - [ ] **Search across past conversations**
 - [ ] **Pin / rename chats** in sidebar
-- [ ] **Copy answer button** on each AI message
-- [ ] **Regenerate** button (re-ask same question)
+- [x] **Copy answer button** on every message (user + assistant), with copied-confirmation flicker
+- [x] **Regenerate** button on the most recent assistant message — peels the assistant turn off the tail and resends the prior user prompt through the same transport (respects the web-search toggle)
 - [ ] **Edit my message** + delete from history
 - [ ] **Source citation panel** — click a citation to expand and see the retrieved chunk text
 - [ ] **Voice input** — Web Speech API for the textarea (free)
