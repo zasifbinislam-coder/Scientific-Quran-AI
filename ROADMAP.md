@@ -91,7 +91,7 @@ When Sir says **"resume"**, pick the highest-priority unchecked items and start.
 - [x] **Regenerate** button on the most recent assistant message — peels the assistant turn off the tail and resends the prior user prompt through the same transport (respects the web-search toggle)
 - [ ] **Edit my message** + delete from history
 - [ ] **Source citation panel** — click a citation to expand and see the retrieved chunk text
-- [ ] **Voice input** — Web Speech API for the textarea (free)
+- [x] **Voice input** — Web Speech API; mic button next to the textarea defaults to bn-BD with English code-switching falling back through Chrome's recognizer. Pulsing red while listening, interim transcript shown live above the input, final transcript appended to existing input. Hidden on browsers without `SpeechRecognition` support.
 - [ ] **Markdown rendering improvements** — tables, code blocks, footnotes
 - [ ] **Bengali UI language toggle** — translate buttons / labels / placeholders into Bengali for full localization
 

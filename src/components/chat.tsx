@@ -25,6 +25,7 @@ import { Sidebar } from "./sidebar";
 import { UpgradeModal } from "./upgrade-modal";
 import { ThemeToggle } from "./theme-toggle";
 import { AuthButton } from "./auth-button";
+import { VoiceInputButton } from "./voice-input-button";
 import {
   ChatSession,
   deriveTitle,
@@ -519,7 +520,7 @@ export function Chat() {
               </button>
             )}
             <div
-              className={`flex items-end gap-2 rounded-2xl border bg-background px-3 py-2 focus-within:border-accent transition-colors ${
+              className={`relative flex items-end gap-2 rounded-2xl border bg-background px-3 py-2 focus-within:border-accent transition-colors ${
                 onCooldown
                   ? "border-amber-300 dark:border-amber-800 opacity-70"
                   : useWebSearch
@@ -548,6 +549,12 @@ export function Chat() {
                 /* font-size: 16px (text-base) prevents iOS auto-zoom on focus */
                 className="flex-1 resize-none bg-transparent px-2 py-2 text-base sm:text-[15px] leading-6 outline-none placeholder:text-muted max-h-40 disabled:cursor-not-allowed"
                 style={{ minHeight: "2.5rem", height: "auto" }}
+              />
+              <VoiceInputButton
+                disabled={isBusy || onCooldown}
+                onTranscript={(t) =>
+                  setInput((prev) => (prev ? prev + " " : "") + t.trim())
+                }
               />
               <button
                 type="button"
