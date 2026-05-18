@@ -325,6 +325,42 @@ export function Chat() {
     });
   }, []);
 
+  // Edit a user message in place, then re-run from that point. The
+  // assistant turn(s) after it are discarded (the new prompt will
+  // produce a fresh answer).
+  const handleEditMessage = useCallback(
+    (messageId: string, newText: string) => {
+      if (status === "submitted" || status === "streaming") return;
+      const trimmed = newText.trim();
+      if (!trimmed) return;
+      const all = messages as UIMessage[];
+      const idx = all.findIndex((m) => m.id === messageId);
+      if (idx < 0) return;
+      if (all[idx].role !== "user") return;
+      // Drop the original user message AND everything after — sendMessage
+      // re-appends the user turn with the new text.
+      setMessages(all.slice(0, idx));
+      sendMessage({ text: trimmed });
+    },
+    [messages, sendMessage, setMessages, status]
+  );
+
+  // Delete a single message from the visible chat (and persisted session).
+  // If deleting a user message we also drop its assistant reply pair so the
+  // history doesn't read as an answer with no question.
+  const handleDeleteMessage = useCallback(
+    (messageId: string) => {
+      if (status === "submitted" || status === "streaming") return;
+      const all = messages as UIMessage[];
+      const idx = all.findIndex((m) => m.id === messageId);
+      if (idx < 0) return;
+      const dropCount =
+        all[idx].role === "user" && all[idx + 1]?.role === "assistant" ? 2 : 1;
+      setMessages([...all.slice(0, idx), ...all.slice(idx + dropCount)]);
+    },
+    [messages, setMessages, status]
+  );
+
   const submit = useCallback(
     (text: string) => {
       const trimmed = text.trim();
@@ -484,12 +520,22 @@ export function Chat() {
               messages.map((m, i) => {
                 const isLastAssistant =
                   m.role === "assistant" && i === messages.length - 1 && !isBusy;
+                const isUser = m.role === "user";
                 return (
                   <MessageBubble
                     key={m.id}
                     message={m as UIMessage}
                     canRegenerate={isLastAssistant}
                     onRegenerate={isLastAssistant ? regenerateLast : undefined}
+                    canEdit={isUser && !isBusy}
+                    onEdit={
+                      isUser
+                        ? (next) => handleEditMessage(m.id, next)
+                        : undefined
+                    }
+                    onDelete={
+                      !isBusy ? () => handleDeleteMessage(m.id) : undefined
+                    }
                   />
                 );
               })

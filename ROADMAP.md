@@ -89,7 +89,7 @@ When Sir says **"resume"**, pick the highest-priority unchecked items and start.
 - [x] **Pin / rename chats** — per-row kebab menu opens Pin/Unpin, Rename (inline edit, Enter to save / Esc to cancel), Delete. Pinned rows float to top of sidebar with the Pin icon swapped in for the message bubble. `customTitle` field on `ChatSession` keeps user-set titles; `sortSessions()` enforces pinned-first ordering both on load and on every mutation.
 - [x] **Copy answer button** on every message (user + assistant), with copied-confirmation flicker
 - [x] **Regenerate** button on the most recent assistant message — peels the assistant turn off the tail and resends the prior user prompt through the same transport (respects the web-search toggle)
-- [ ] **Edit my message** + delete from history
+- [x] **Edit user messages + delete from history** — Edit swaps the bubble for an inline textarea (Cmd/Ctrl+Enter to send, Esc to cancel) and re-runs the conversation from that point. Delete removes the message (plus its paired assistant reply if applicable) without re-running. Both actions are disabled while a response is streaming.
 - [ ] **Source citation panel** — click a citation to expand and see the retrieved chunk text
 - [x] **Voice input** — Web Speech API; mic button next to the textarea defaults to bn-BD with English code-switching falling back through Chrome's recognizer. Pulsing red while listening, interim transcript shown live above the input, final transcript appended to existing input. Hidden on browsers without `SpeechRecognition` support.
 - [ ] **Markdown rendering improvements** — tables, code blocks, footnotes
