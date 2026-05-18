@@ -234,6 +234,10 @@ export async function POST(req: Request) {
         source: c.source,
         similarity: c.similarity,
         kind: (c.metadata as { kind?: string })?.kind,
+        // Truncate so the metadata payload stays small. The full chunk
+        // is still in Supabase; this preview is the educational "see
+        // what the model was reading" view in the chat UI.
+        content: c.content.slice(0, 600),
       })),
       webSearch: useWebSearch,
     }),

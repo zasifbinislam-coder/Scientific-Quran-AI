@@ -13,6 +13,7 @@ import {
   User,
 } from "lucide-react";
 import type { UIMessage } from "ai";
+import { SourcesPanel, type RetrievedSource } from "./sources-panel";
 
 // Force "Arabic:" / "Translation:" (and Bengali equivalents) to always begin
 // their own paragraph, regardless of how the LLM laid out whitespace. This
@@ -185,6 +186,13 @@ export function MessageBubble({
             <span className="text-muted italic">…</span>
           )}
         </div>
+        {!isUser && !editing && (() => {
+          const sources = (
+            (message as UIMessage & { metadata?: { sources?: RetrievedSource[] } })
+              .metadata?.sources ?? []
+          );
+          return sources.length > 0 ? <SourcesPanel sources={sources} /> : null;
+        })()}
         {text && !editing && (
           <MessageActions
             text={text}
