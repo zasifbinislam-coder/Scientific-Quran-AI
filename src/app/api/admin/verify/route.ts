@@ -7,6 +7,11 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getServerSupabase, isAdminEmail } from "@/lib/supabase-auth";
 import { getSupabase } from "@/lib/supabase";
+import {
+  sendEmail,
+  subscriptionActivatedEmail,
+  subscriptionRejectedEmail,
+} from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -85,6 +90,24 @@ export async function POST(req: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Notify the subscriber of the new status. Fire-and-forget — never block
+  // the admin's UI response on email delivery.
+  if (data?.email && data?.name) {
+    if (body.action === "verify" && data.expires_at) {
+      sendEmail({
+        to: data.email,
+        subject: "Your subscription is active",
+        html: subscriptionActivatedEmail(data.name, new Date(data.expires_at)),
+      }).catch((err) => console.error("[/api/admin/verify] email error:", err));
+    } else if (body.action === "reject") {
+      sendEmail({
+        to: data.email,
+        subject: "About your subscription payment",
+        html: subscriptionRejectedEmail(data.name, data.notes ?? null),
+      }).catch((err) => console.error("[/api/admin/verify] email error:", err));
+    }
   }
 
   return NextResponse.json({ ok: true, row: data });

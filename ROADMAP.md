@@ -62,11 +62,11 @@ When Sir says **"resume"**, pick the highest-priority unchecked items and start.
 - [x] **Tie subscription rows to `user_id`** — added nullable `user_id` column + backfill + index; `/api/subscribe` attaches the signed-in user's id at submit; `/account` queries by user_id OR email so legacy rows and anonymous submissions both stay visible
 
 ### Subscription robustness
-- [ ] **Email notifications** — Resend or SES integration. Send email when:
-  - User submits subscription request → "We received your payment, verifying within 24h"
-  - Admin verifies → "Your subscription is active!"
-  - Subscription expiring in 7 days → renewal reminder
-  - Subscription expired → "Renew now" email
+- [x] **Email notifications (transactional)** — Resend wired with graceful no-key fallback. Fires on:
+  - User submits subscription → bilingual "we received your payment" receipt with TrxID
+  - Admin verifies → bilingual "your subscription is active until X" + CTA
+  - Admin rejects → bilingual "we couldn't verify" with optional notes
+- [ ] **Email notifications (lifecycle, cron-driven)** — expiring-in-7-days reminder and expired-renew-now email (needs Vercel cron task)
 - [ ] **Cancel / refund flow** — let user request cancellation
 - [ ] **Automatic verification** if we ever integrate bKash payment API (long-term, requires merchant account)
 - [ ] **Subscriber-only chat features**: maybe higher Gemini RPM, longer conversations, image upload

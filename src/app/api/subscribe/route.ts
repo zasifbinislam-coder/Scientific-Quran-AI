@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { getSupabase, hasSupabase } from "@/lib/supabase";
 import { getServerSupabase } from "@/lib/supabase-auth";
+import { sendEmail, subscriptionReceivedEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -113,6 +114,13 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+
+  // Fire-and-forget receipt email — never block the response on it.
+  sendEmail({
+    to: email,
+    subject: "We received your subscription request",
+    html: subscriptionReceivedEmail(name, transactionId),
+  }).catch((err) => console.error("[/api/subscribe] email error:", err));
 
   return Response.json({
     ok: true,
