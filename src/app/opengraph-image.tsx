@@ -1,6 +1,10 @@
 import { ImageResponse } from "next/og";
 
-export const runtime = "edge";
+// Node runtime: Satori on the edge runtime silently fails to render
+// emoji / Arabic glyphs without a custom font bundle. Node has the
+// system PNG renderer and stays inside the function-size budget on
+// Vercel's free tier for this small image.
+export const runtime = "nodejs";
 
 export const alt = "Scientific Quran AI — Tafsir & Wisdom";
 export const size = { width: 1200, height: 630 };
@@ -16,31 +20,33 @@ export default async function OG() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          padding: "64px 72px",
+          padding: "72px 80px",
           background:
             "linear-gradient(135deg, #0d3a32 0%, #0d7b6f 55%, #1a8a73 100%)",
           color: "#f8f5ef",
-          fontFamily: "system-ui, sans-serif",
+          fontFamily: "sans-serif",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
           <div
             style={{
-              fontSize: 36,
+              fontSize: 32,
+              fontWeight: 700,
               width: 64,
               height: 64,
-              borderRadius: 18,
-              background: "rgba(255,255,255,0.12)",
+              borderRadius: 16,
+              background: "rgba(255,255,255,0.14)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              border: "1px solid rgba(255,255,255,0.25)",
             }}
           >
-            📖
+            QA
           </div>
           <div
             style={{
-              fontSize: 28,
+              fontSize: 30,
               fontWeight: 600,
               letterSpacing: "-0.01em",
               opacity: 0.95,
@@ -50,29 +56,29 @@ export default async function OG() {
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div
             style={{
-              fontSize: 84,
+              fontSize: 90,
               fontWeight: 700,
               lineHeight: 1.05,
               letterSpacing: "-0.025em",
               maxWidth: 980,
             }}
           >
-            Tafsir & Wisdom, grounded in source.
+            Tafsir &amp; Wisdom, grounded in source.
           </div>
           <div
             style={{
               fontSize: 30,
               fontWeight: 400,
-              opacity: 0.85,
-              maxWidth: 920,
+              opacity: 0.88,
+              maxWidth: 960,
               lineHeight: 1.35,
             }}
           >
             Quran-grounded answers from authentic Hadith and scholarly tafsir.
-            English & বাংলা.
+            Bilingual: English &amp; Bengali.
           </div>
         </div>
 
@@ -81,17 +87,20 @@ export default async function OG() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            opacity: 0.85,
-            fontSize: 22,
+            opacity: 0.9,
+            fontSize: 24,
+            fontWeight: 500,
           }}
         >
-          <div style={{ display: "flex", gap: 18 }}>
-            <span>· Quran</span>
-            <span>· Bukhari</span>
-            <span>· Tafsir</span>
+          <div style={{ display: "flex", gap: 24 }}>
+            <span>Quran</span>
+            <span style={{ opacity: 0.5 }}>/</span>
+            <span>Bukhari</span>
+            <span style={{ opacity: 0.5 }}>/</span>
+            <span>Tafsir</span>
           </div>
-          <div style={{ fontFamily: "serif", fontSize: 30, letterSpacing: "0.04em" }}>
-            بسم الله الرحمن الرحيم
+          <div style={{ fontSize: 22, opacity: 0.8 }}>
+            scientific-quran-ai.vercel.app
           </div>
         </div>
       </div>
