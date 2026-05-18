@@ -74,8 +74,8 @@ When Sir says **"resume"**, pick the highest-priority unchecked items and start.
 ### Public launch must-haves
 - [ ] **Custom domain** — Sir buys (~$10/yr at Namecheap/Porkbun), I configure DNS via Vercel
 - [ ] **Logo & favicon** — replace default Next.js favicon with proper Quran AI branding
-- [ ] **SEO meta tags + OG image** — for nice link previews on WhatsApp/Twitter/FB
-- [ ] **Sitemap.xml + robots.txt**
+- [x] **SEO meta tags + OG image** — full Metadata (title template, OpenGraph, Twitter card, keywords, alternate locale bn_BD); programmatic 1200×630 OG image at `/opengraph-image` using next/og
+- [x] **Sitemap.xml + robots.txt** — auto-generated via `src/app/sitemap.ts` and `src/app/robots.ts`; /admin, /api/, /auth/ disallowed
 - [ ] **Analytics** — Plausible or Umami (privacy-friendly, free) instead of GA
 - [ ] **Error monitoring** — Sentry free tier (5k errors/mo) so you know when prod breaks
 

@@ -18,10 +18,56 @@ const amiri = Amiri({
   subsets: ["arabic", "latin"],
 });
 
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  "https://scientific-quran-ai.vercel.app";
+
+const SITE_NAME = "Scientific Quran AI";
+const SITE_TAGLINE = "Tafsir & Wisdom";
+const SITE_DESC =
+  "A scientific, Quran-grounded AI assistant. Answers from the Holy Quran, authentic Hadith, and scholarly tafsir — bilingual (English & Bengali).";
+
 export const metadata: Metadata = {
-  title: "Scientific Quran AI — Tafsir & Wisdom",
-  description:
-    "A scientific, Quran-grounded AI assistant. Answers from the Holy Quran, authentic Hadith, and scholarly tafsir — bilingual (English & Bengali).",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    template: `%s · ${SITE_NAME}`,
+  },
+  description: SITE_DESC,
+  keywords: [
+    "Quran AI",
+    "Islamic AI",
+    "Quran chatbot",
+    "Hadith search",
+    "scientific tafsir",
+    "Bengali Quran",
+    "বাংলা কুরআন",
+    "Zakaria Kamal tafsir",
+    "Bukhari hadith",
+  ],
+  authors: [{ name: "Zasif bin Islam", url: "https://github.com/zasifbinislam-coder" }],
+  creator: "Zasif bin Islam",
+  alternates: { canonical: SITE_URL },
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESC,
+    locale: "en_US",
+    alternateLocale: ["bn_BD"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESC,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
+  category: "education",
 };
 
 export const viewport: Viewport = {
