@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { getServerSupabase } from "@/lib/supabase-auth";
 import { getSupabase } from "@/lib/supabase";
+import { CancelButton } from "@/components/cancel-button";
 
 export const dynamic = "force-dynamic";
 
@@ -90,8 +91,10 @@ export default async function AccountPage() {
           {/* Subscription state */}
           {active ? (
             <ActiveCard
+              id={active.id}
               expiresAt={new Date(active.expires_at!)}
               plan={active.plan}
+              cancelRequested={(active.notes ?? "").includes("[CANCEL REQUESTED")}
             />
           ) : pending ? (
             <PendingCard transactionId={pending.transaction_id} />
@@ -170,7 +173,17 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
-function ActiveCard({ expiresAt, plan }: { expiresAt: Date; plan: string }) {
+function ActiveCard({
+  id,
+  expiresAt,
+  plan,
+  cancelRequested,
+}: {
+  id: number;
+  expiresAt: Date;
+  plan: string;
+  cancelRequested: boolean;
+}) {
   const daysLeft = Math.ceil(
     (expiresAt.getTime() - Date.now()) / (24 * 3600 * 1000)
   );
@@ -196,6 +209,13 @@ function ActiveCard({ expiresAt, plan }: { expiresAt: Date; plan: string }) {
         You bypass per-IP rate limits while your subscription is active. Web
         search grounding included.
       </p>
+      {cancelRequested ? (
+        <p className="text-xs text-muted mt-3 italic">
+          ✓ Cancellation requested — admin will process the refund manually.
+        </p>
+      ) : (
+        <CancelButton subscriptionId={id} />
+      )}
     </div>
   );
 }
