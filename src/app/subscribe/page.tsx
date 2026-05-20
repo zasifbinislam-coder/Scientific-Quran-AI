@@ -14,7 +14,7 @@ import {
   User as UserIcon,
 } from "lucide-react";
 
-const BKASH_NUMBER = "01920262202"; // ← Sir's bKash personal/merchant number (update before launch)
+const BKASH_NUMBER = "01920262202";
 
 type Status =
   | { state: "idle" }
@@ -147,11 +147,11 @@ export default function SubscribePage() {
                   1
                 </span>
                 <span>
-                  Send <strong>৳ 300</strong> to our bKash number:{" "}
+                  bKash app → <strong>Send Money</strong> →{" "}
                   <code className="bg-surface-muted px-1.5 py-0.5 rounded text-[13px]">
                     {BKASH_NUMBER}
                   </code>{" "}
-                  (Send Money / Payment).
+                  → amount <strong>৳ 300</strong>.
                 </span>
               </li>
               <li className="flex gap-3">
